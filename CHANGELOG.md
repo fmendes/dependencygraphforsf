@@ -4,6 +4,8 @@ All notable changes to the "dependencygraphforsf" extension will be documented i
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [Released]
 
-- Initial release
+- Initial release 0.0.1
+- 1.0.1 release:  added issue reporting GitHub template
+- 1.0.2 release:  replaced the Node "open" package - if sometimes does not get installed properly for some reason
