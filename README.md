@@ -31,6 +31,14 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 ## Release Notes
 
 
-### 1.0.0
+### 0.0.1
 
 Initial release of Dependency Graph for Salesforce
+
+### 1.0.1
+
+Added issue reporting GitHub template
+
+### 1.0.2
+
+Replaced the Node "open" package - it sometimes does not get installed properly for some reason

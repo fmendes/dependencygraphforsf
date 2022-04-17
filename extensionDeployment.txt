@@ -1,0 +1,7 @@
+As per https://www.freecodecamp.org/news/making-vscode-extension/, for each new release:
+
+1) update the version in package.json
+2) update the CHANGELOG.md
+3) update the release notes in README.md
+4) run vsce package
+5) run vsce publish
