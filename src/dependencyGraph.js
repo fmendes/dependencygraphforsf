@@ -567,13 +567,17 @@ theGraph.setAttribute("height","100%"); }, 1000 );</script>
     //vscode.window.showInformationMessage( `Dependency Graph:  File dependencyGraph.html written successfully on ${fullPath}` );
     //console.log( `File dependencyGraph.html written successfully on ${fullPath}` );
 
-    // open browser with dependency graph
-    const open = require('open');
-    (async () => {
-        await open( `${fullPath}/dependencyGraph.html`, {wait: false} );
-        vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-        //console.log( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-    }) ();
+    // open dependency graph in default browser
+    vscode.env.openExternal( vscode.Uri.parse( `${fullPath}/dependencyGraph.html` ) );
+    vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
+
+    // // open browser with dependency graph
+    // const open = require('open');
+    // (async () => {
+    //     await open( `${fullPath}/dependencyGraph.html`, {wait: false} );
+    //     vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
+    //     //console.log( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
+    // }) ();
 }
 
 module.exports = {
