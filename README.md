@@ -42,3 +42,7 @@ Added issue reporting GitHub template
 ### 1.0.2
 
 Replaced the Node "open" package - it sometimes does not get installed properly for some reason
+
+### 1.0.3
+
+Increased maximum number of dependencies and added context menu items and ability to display the graph for only one item with all its dependencies

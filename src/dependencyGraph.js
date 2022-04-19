@@ -1,5 +1,16 @@
-// USAGE:  node ./dependencyGraph.js myProjectFolder               # will show class dependencies
-//         node ./dependencyGraph.js myProjectFolder --trigger     # will show trigger vs class dependencies
+/*
+ Copyright (c) 2022 Fernando Fernandez, All rights reserved.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. The name of the author may not be used to endorse or promote products
+    derived from this software without specific prior written permission.
+ */
 
 // extracts class and method names, then finds dependencies between them and opens a dependency graph using Mermaid JS
 
@@ -300,7 +311,9 @@ class ItemData {
 
 // MAIN
 
-function createGraph( projectFolder, myArgs ) {
+function createGraph( projectFolder, selectedItem, myArgs ) {
+
+    const dependencyLimit = 700;    
 
     // set proper folder location according to first parameter
     //let projectFolder = '.';
@@ -434,7 +447,14 @@ function createGraph( projectFolder, myArgs ) {
     let elementsWithMoreRefs = [];
     let independentItemList = [];
     let listByType = new Map();
+    let dependencyCount = 0;
+    let theSelectedItem = crossReferenceMap.get( selectedItem );
     sortedClassReferenceArray.forEach( anItem => {
+        // if an item was specified, filter by it
+        if( selectedItem && selectedItem !== anItem.name
+                && ! anItem.referencesSet.has( theSelectedItem ) ) {
+            return;
+        }
 
         // skip elements that were not specified in the command line
         if( classFlag && anItem.itemType.type != CLASSType ) {
@@ -478,6 +498,18 @@ function createGraph( projectFolder, myArgs ) {
 
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
+            if( theSelectedItem 
+                    && aReference !== theSelectedItem
+                    && anItem !== theSelectedItem ) {
+                return;
+            }
+        
+            // limit number of elements in graph due to mermaid.js limit
+            if( dependencyCount >= dependencyLimit ) {
+                return;
+            }
+            dependencyCount++;
+
             // TODO:  fix this:  if this reference is added with the methodList initially 
             // and added again as referencer (hence without the methodList), 
             // the methodList on the first instance is omitted from the graph
@@ -530,6 +562,11 @@ function createGraph( projectFolder, myArgs ) {
         styleSheetList += `\nclassDef ${itemType} fill:${color},stroke-width:4px;\nclass ${aListItem} ${itemType}\n`;
     } );
 
+    // highlight the selected item in the graph
+    if( selectedItem ) {
+        styleSheetList += `\nclassDef ${selectedItem}Item stroke:red,stroke-width:8px;\nclass ${theSelectedItem.uniqueName} ${selectedItem}Item\n`;
+    }
+
     // build HTML page with dependency graph
     let independentItemElement = ( independentItemList.length === 0 ? '' :
                     'independentItems(ITEMS WITH NO DEPENDENCIES:<br><br>' + independentItemList.join( '<br>' ) + ')\n' );
@@ -544,7 +581,10 @@ function createGraph( projectFolder, myArgs ) {
                 + ( flowFlag ? 'Flows ' : '' )
                 + ( classFlag ? 'Apex Classes ' : '' )
                 + ( vfpageFlag ? 'Visualforce Pages ' : '' )
-            + 'Dependency Graph for ' + fullPath;
+            + `Dependency Graph for ${fullPath}`
+            + `<br>Dependencies for ${selectedItem}`
+            + `<br><br>Number of Dependencies: ${dependencyCount}`
+            + ( dependencyCount == dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
 
     // build page with everything and script to adjust height of graph
     let graphHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
@@ -553,7 +593,7 @@ function createGraph( projectFolder, myArgs ) {
 graph LR\n${graphDefinition}${independentItemElement}${styleSheetList}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true,securityLevel:\'loose\'}); 
+<script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:\'loose\'}); 
 setTimeout( () => { var theGraph = document.querySelector("#theGraph SVG"); 
 theGraph.setAttribute("height","100%"); }, 1000 );</script>
 </body></html>`;

@@ -2,7 +2,7 @@
 	"name": "dependencygraphforsf",
 	"displayName": "DependencyGraphForSF",
 	"description": "Creates dependency graphs for LWC, Aura, VisualForce, Apex Classes, Triggers and Flows",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"engines": {
 		"vscode": "^1.66.0"
 	},
@@ -16,6 +16,7 @@
 		, "onCommand:dependencygraphforsf.graphLWCs"
 		, "onCommand:dependencygraphforsf.graphAuraComponents"
 		, "onCommand:dependencygraphforsf.graphVisualforcePages"
+		, "onCommand:dependencygraphforsf.graphItem"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -44,7 +45,74 @@
 				"command": "dependencygraphforsf.graphVisualforcePages",
 				"title": "Dependency graph for Visualforce Pages"
 			}
-		]
+			, {
+				"command": "dependencygraphforsf.graphItem",
+				"title": "Dependency graph for the selected item"
+			}
+		],
+		"menus": {
+			"editor/context": [
+			  {
+				"command": "dependencygraphforsf.graphItem",
+				"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
+			  }
+			],
+			"explorer/context": [
+			  {
+				"command": "dependencygraphforsf.graphItem",
+				"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphTriggers",
+				"when": " resourceDirname =~ /triggers/ "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphLWCs",
+				"when": " resourceDirname =~ /lwc/ "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphClasses",
+				"when": " resourceDirname =~ /classes/ "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphAuraComponents",
+				"when": " resourceDirname =~ /aura/ "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphFlows",
+				"when": " resourceDirname =~ /flows/ "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphVisualforcePages",
+				"when": " resourceDirname =~ /pages/ "
+			  }
+			  ,
+			  {
+				"command": "dependencygraphforsf.graphTriggers",
+				"when": " explorerResourceIsFolder && resourceFilename == triggers "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphLWCs",
+				"when": " explorerResourceIsFolder && resourceFilename == lwc "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphClasses",
+				"when": " explorerResourceIsFolder && resourceFilename == classes "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphAuraComponents",
+				"when": " explorerResourceIsFolder && resourceFilename == aura "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphFlows",
+				"when": " explorerResourceIsFolder && resourceFilename == flows "
+			  },
+			  {
+				"command": "dependencygraphforsf.graphVisualforcePages",
+				"when": " explorerResourceIsFolder && resourceFilename == pages "
+			  }
+			]
+		}
 	},
 	"scripts": {
 		"lint": "eslint .",
@@ -66,5 +134,6 @@
 		"type": "git",
 		"url": "https://github.com/fmendes/dependencygraphforsf"
 	},
+    "homepage": "https://www.linkedin.com/in/fernandofernandez1/",
 	"publisher": "FERNANDOFERNANDEZ"
 }
