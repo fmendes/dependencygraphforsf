@@ -5,8 +5,8 @@
 	"version": "1.0.4",
 	"icon": "images/DependencyGraphForSF.png",
 	"galleryBanner": {
-	  "color": "#ECECEC",
-	  "theme": "light"
+		"color": "#ECECEC",
+		"theme": "light"
 	},
 	"engines": {
 		"vscode": "^1.64.0"
@@ -15,13 +15,13 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:dependencygraphforsf.graphClasses"
-		, "onCommand:dependencygraphforsf.graphTriggers"
-		, "onCommand:dependencygraphforsf.graphFlows"
-		, "onCommand:dependencygraphforsf.graphLWCs"
-		, "onCommand:dependencygraphforsf.graphAuraComponents"
-		, "onCommand:dependencygraphforsf.graphVisualforcePages"
-		, "onCommand:dependencygraphforsf.graphItem"
+		"onCommand:dependencygraphforsf.graphClasses",
+		"onCommand:dependencygraphforsf.graphTriggers",
+		"onCommand:dependencygraphforsf.graphFlows",
+		"onCommand:dependencygraphforsf.graphLWCs",
+		"onCommand:dependencygraphforsf.graphAuraComponents",
+		"onCommand:dependencygraphforsf.graphVisualforcePages",
+		"onCommand:dependencygraphforsf.graphItem"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -29,93 +29,92 @@
 			{
 				"command": "dependencygraphforsf.graphClasses",
 				"title": "Dependency graph for Apex Classes"
-			}
-			, {
+			},
+			{
 				"command": "dependencygraphforsf.graphTriggers",
 				"title": "Dependency graph for Apex Triggers"
-			}
-			, {
+			},
+			{
 				"command": "dependencygraphforsf.graphFlows",
 				"title": "Dependency graph for Flows"
-			}
-			, {
+			},
+			{
 				"command": "dependencygraphforsf.graphLWCs",
 				"title": "Dependency graph for Lightning Web Components"
-			}
-			, {
+			},
+			{
 				"command": "dependencygraphforsf.graphAuraComponents",
 				"title": "Dependency graph for Aura Components"
-			}
-			, {
+			},
+			{
 				"command": "dependencygraphforsf.graphVisualforcePages",
 				"title": "Dependency graph for Visualforce Pages"
-			}
-			, {
+			},
+			{
 				"command": "dependencygraphforsf.graphItem",
 				"title": "Dependency graph for the selected item"
 			}
 		],
 		"menus": {
 			"editor/context": [
-			  {
-				"command": "dependencygraphforsf.graphItem",
-				"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
-			  }
+				{
+					"command": "dependencygraphforsf.graphItem",
+					"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
+				}
 			],
 			"explorer/context": [
-			  {
-				"command": "dependencygraphforsf.graphItem",
-				"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphTriggers",
-				"when": " resourceDirname =~ /triggers/ "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphLWCs",
-				"when": " resourceDirname =~ /lwc/ "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphClasses",
-				"when": " resourceDirname =~ /classes/ "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphAuraComponents",
-				"when": " resourceDirname =~ /aura/ "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphFlows",
-				"when": " resourceDirname =~ /flows/ "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphVisualforcePages",
-				"when": " resourceDirname =~ /pages/ "
-			  }
-			  ,
-			  {
-				"command": "dependencygraphforsf.graphTriggers",
-				"when": " explorerResourceIsFolder && resourceFilename == triggers "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphLWCs",
-				"when": " explorerResourceIsFolder && resourceFilename == lwc "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphClasses",
-				"when": " explorerResourceIsFolder && resourceFilename == classes "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphAuraComponents",
-				"when": " explorerResourceIsFolder && resourceFilename == aura "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphFlows",
-				"when": " explorerResourceIsFolder && resourceFilename == flows "
-			  },
-			  {
-				"command": "dependencygraphforsf.graphVisualforcePages",
-				"when": " explorerResourceIsFolder && resourceFilename == pages "
-			  }
+				{
+					"command": "dependencygraphforsf.graphItem",
+					"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphTriggers",
+					"when": " resourceDirname =~ /triggers/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphLWCs",
+					"when": " resourceDirname =~ /lwc/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphClasses",
+					"when": " resourceDirname =~ /classes/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphAuraComponents",
+					"when": " resourceDirname =~ /aura/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphFlows",
+					"when": " resourceDirname =~ /flows/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphVisualforcePages",
+					"when": " resourceDirname =~ /pages/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphTriggers",
+					"when": " explorerResourceIsFolder && resourceFilename == triggers "
+				},
+				{
+					"command": "dependencygraphforsf.graphLWCs",
+					"when": " explorerResourceIsFolder && resourceFilename == lwc "
+				},
+				{
+					"command": "dependencygraphforsf.graphClasses",
+					"when": " explorerResourceIsFolder && resourceFilename == classes "
+				},
+				{
+					"command": "dependencygraphforsf.graphAuraComponents",
+					"when": " explorerResourceIsFolder && resourceFilename == aura "
+				},
+				{
+					"command": "dependencygraphforsf.graphFlows",
+					"when": " explorerResourceIsFolder && resourceFilename == flows "
+				},
+				{
+					"command": "dependencygraphforsf.graphVisualforcePages",
+					"when": " explorerResourceIsFolder && resourceFilename == pages "
+				}
 			]
 		}
 	},
@@ -125,20 +124,23 @@
 		"test": "node ./test/runTest.js"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.64.0",
 		"@types/glob": "^7.2.0",
 		"@types/mocha": "^9.1.0",
 		"@types/node": "14.x",
+		"@types/vscode": "^1.64.0",
+		"@vscode/test-electron": "^2.1.3",
 		"eslint": "^8.11.0",
 		"glob": "^7.2.0",
 		"mocha": "^9.2.2",
-		"typescript": "^4.5.5",
-		"@vscode/test-electron": "^2.1.3"
+		"typescript": "^4.5.5"
 	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/fmendes/dependencygraphforsf"
 	},
-    "homepage": "https://www.linkedin.com/in/fernandofernandez1/",
-	"publisher": "FERNANDOFERNANDEZ"
+	"homepage": "https://www.linkedin.com/in/fernandofernandez1/",
+	"publisher": "FERNANDOFERNANDEZ",
+	"dependencies": {
+		"url-parse": "^1.5.10"
+	}
 }
