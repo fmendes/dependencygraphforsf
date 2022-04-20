@@ -6,7 +6,7 @@ This extension scans the Salesforce metadata and code stored in /force-app/main/
 
 This extension will open a dependency graph for the selected type of element.
 
-Activate with Ctrl + Shift + P and type/select one of the "Dependency graph..." options.
+Activate with Ctrl + Shift + P or right click a folder or file then select one of the "Dependency graph..." options.
 
 Dependency graph for Aura components
 ![Dependency Graph for Aura components](images/AuraDependencyGraph.png)
@@ -16,6 +16,10 @@ Dependency graph for Apex Classes
 
 Dependency graph for Lightning Web Components
 ![Dependency Graph for Lightning Web Components](images/LWCDependencyGraph.png)
+
+Dependency graph from the right click context menu
+![Dependency graph from the right click context menu](images/contextMenu.png)
+
 ## Requirements
 
 The metadata must have been downloaded and available in the folder /force-app/main/default using "SFDX: Retrieve Source from Org".
@@ -31,18 +35,22 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 ## Release Notes
 
 
-### 0.0.1
+### 1.0.4
 
-Initial release of Dependency Graph for Salesforce
+New icon
 
-### 1.0.1
+### 1.0.3
 
-Added issue reporting GitHub template
+Increased maximum number of dependencies and added context menu items and ability to display the graph for only one item with all its dependencies
 
 ### 1.0.2
 
 Replaced the Node "open" package - it sometimes does not get installed properly for some reason
 
-### 1.0.3
+### 1.0.1
 
-Increased maximum number of dependencies and added context menu items and ability to display the graph for only one item with all its dependencies
+Added issue reporting GitHub template
+
+### 0.0.1
+
+Initial release of Dependency Graph for Salesforce

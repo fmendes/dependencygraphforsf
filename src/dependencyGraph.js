@@ -582,7 +582,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 + ( classFlag ? 'Apex Classes ' : '' )
                 + ( vfpageFlag ? 'Visualforce Pages ' : '' )
             + `Dependency Graph for ${fullPath}`
-            + `<br>Dependencies for ${selectedItem}`
+            + ( selectedItem ? `<br>Dependencies for ${selectedItem}` : '' )
             + `<br><br>Number of Dependencies: ${dependencyCount}`
             + ( dependencyCount == dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
 
