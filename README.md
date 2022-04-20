@@ -35,6 +35,10 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 ## Release Notes
 
 
+### 1.0.5
+
+Enhanced code that parses method calls to work better with Mermaid JS
+
 ### 1.0.4
 
 New icon, dependency graph for single item now includes "grandparents" and "grandchildren" dependencies, adjusted compatibility with VSCode 1.60 and later versions

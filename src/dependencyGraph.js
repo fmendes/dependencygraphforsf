@@ -99,7 +99,8 @@ class ItemType {
             return aReference.replace( `${itemName}.`, '' ).replace( '(', '' ).replace( /\..*/gi, '' )
                                         .replace( instantiationExpression, 'instantiation' )
                                         .replace( `new ${itemName}`, 'instantiation' )
-                                        .replace( flowRefExpression, 'flow' );
+                                        .replace( flowRefExpression, 'flow' )
+                                        .replace( /[^a-zA-Z\d\s:]/g, ' ' );
         } );
         //console.log( `Found ${foundReferences.length} references to ${itemName}`, foundReferences );
         return foundReferences;
