@@ -37,7 +37,7 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 
 ### 1.0.4
 
-New icon
+New icon, dependency graph for single item now includes "grandparents" and "grandchildren" dependencies, adjusted compatibility with VSCode 1.60 and later versions
 
 ### 1.0.3
 

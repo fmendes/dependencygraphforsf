@@ -307,6 +307,18 @@ class ItemData {
 
         return `(${this.displayName}<br>${methodReferencesText})`;
     }
+    checkReferenceSet( anItem ) {
+        // check if the references contain a reference to the item
+        // (check "grand children")
+        if( ! this.referencesSet ) {
+            return false;
+        }
+        let found = [...this.referencesSet].find( 
+                        aReference => aReference.referencesSet 
+                                    && aReference.referencesSet.has( anItem ) );
+
+        return ! ! found;
+    }
 }
 
 // MAIN
@@ -451,8 +463,13 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let theSelectedItem = crossReferenceMap.get( selectedItem );
     sortedClassReferenceArray.forEach( anItem => {
         // if an item was specified, filter by it
-        if( selectedItem && selectedItem !== anItem.name
-                && ! anItem.referencesSet.has( theSelectedItem ) ) {
+        let itemHasReferences = ( theSelectedItem 
+            && anItem.name !== selectedItem
+            && ! anItem.referencesSet.has( theSelectedItem )
+            && ! theSelectedItem.referencesSet.has( anItem )
+            && ! anItem.checkReferenceSet( theSelectedItem )
+            && ! theSelectedItem.checkReferenceSet( anItem ) );
+        if( itemHasReferences ) {
             return;
         }
 
@@ -498,9 +515,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
-            if( theSelectedItem 
+            if( itemHasReferences 
                     && aReference !== theSelectedItem
-                    && anItem !== theSelectedItem ) {
+                    && ! aReference.referencesSet.has( theSelectedItem ) ) {
                 return;
             }
         
@@ -563,7 +580,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     } );
 
     // highlight the selected item in the graph
-    if( selectedItem ) {
+    if( theSelectedItem ) {
         styleSheetList += `\nclassDef ${selectedItem}Item stroke:red,stroke-width:8px;\nclass ${theSelectedItem.uniqueName} ${selectedItem}Item\n`;
     }
 
@@ -582,7 +599,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 + ( classFlag ? 'Apex Classes ' : '' )
                 + ( vfpageFlag ? 'Visualforce Pages ' : '' )
             + `Dependency Graph for ${fullPath}`
-            + ( selectedItem ? `<br>Dependencies for ${selectedItem}` : '' )
+            + ( theSelectedItem ? `<br>Dependencies for ${theSelectedItem.displayName}` : '' )
             + `<br><br>Number of Dependencies: ${dependencyCount}`
             + ( dependencyCount == dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
 
