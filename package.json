@@ -139,8 +139,5 @@
 		"url": "https://github.com/fmendes/dependencygraphforsf"
 	},
 	"homepage": "https://www.linkedin.com/in/fernandofernandez1/",
-	"publisher": "FERNANDOFERNANDEZ",
-	"dependencies": {
-		"url-parse": "^1.5.10"
-	}
+	"publisher": "FERNANDOFERNANDEZ"
 }
