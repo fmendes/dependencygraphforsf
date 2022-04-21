@@ -45,6 +45,9 @@ var getAdjustedProjectFolder = ( projectFolder ) => {
 
     return null;
 }
+var getUniqueName = ( aName, aType ) => {
+    return `${aName}-${aType}`;
+}
 
 class ItemType {
     constructor( type, folder, extension, color ) {
@@ -252,7 +255,7 @@ class ItemData {
         this.itemType = anItemType;
 
         // this is for when a class and another item have the same name
-        this.uniqueName = `${aName}-${anItemType.type}`;
+        this.uniqueName = getUniqueName( aName, anItemType.type ); //`${aName}-${anItemType.type}`;
         this.filePath = filePath;
         this.referencesSet = new Set();
         this.referencedCount = 0;
@@ -330,7 +333,23 @@ class ItemData {
     }
 }
 
+//
+//
+//
+//
+//
+//
+//
+//
 // MAIN
+//
+//
+//
+//
+//
+//
+//
+//
 
 function createGraph( projectFolder, selectedItem, myArgs ) {
 
@@ -353,6 +372,29 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let flowFlag = lowerCaseArgs.includes( '--flow' );
     let vfpageFlag = lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' );
     let classFlag = !triggerFlag && !lwcFlag && !auraFlag && !flowFlag && !vfpageFlag;
+
+    // get unique name to identify selected item
+    let selectedItemUniqueName;
+    if( selectedItem ) {
+        if( classFlag ) {
+            selectedItemUniqueName = getUniqueName( selectedItem, CLASSType );
+        }
+        if( triggerFlag ) {
+            selectedItemUniqueName = getUniqueName( selectedItem, TRIGGERType );
+        }
+        if( lwcFlag ) {
+            selectedItemUniqueName = getUniqueName( selectedItem, LWCType );
+        }
+        if( auraFlag ) {
+            selectedItemUniqueName = getUniqueName( selectedItem, AURAType );
+        }
+        if( flowFlag ) {
+            selectedItemUniqueName = getUniqueName( selectedItem, FLOWType );
+        }
+        if( vfpageFlag ) {
+            selectedItemUniqueName = getUniqueName( selectedItem, PAGEType );
+        }
+    }
 
     // this is the basis of the dependency graph
     let crossReferenceMap = new Map();
@@ -379,7 +421,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // identify the references the current item has to a LWC/Aura/VF and store in map
             // if LWC flag was specified, it will attempt to find LWCs in the file and so forth
             // for Flows, it will look for references in other flows and classes too
-            if( ( lwcFlag && itemType.type === LWCType ) 
+            // BUT if an item is selected, it will look for references to that item in all files regardless
+            if( selectedItemUniqueName || ( lwcFlag && itemType.type === LWCType ) 
                     || ( auraFlag && itemType.type === AURAType ) 
                     || ( vfpageFlag && itemType.type === PAGEType ) 
                     || ( flowFlag && itemType.type === FLOWType ) ) {
@@ -395,7 +438,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                     anItem.referencedCount++;
                     
                     // store referenced class in xref map
-                    crossReferenceMap.set( anItem.name, anItem );
+                    crossReferenceMap.set( anItem.uniqueName, anItem );
 
                     // TODO:  store the interface of the item (public methods/attributes) and what sObjects it references
 
@@ -430,14 +473,14 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 innerclass.referencedCount++;
 
                 // store referenced class in xref map
-                crossReferenceMap.set( innerclass.name, innerclass );
+                crossReferenceMap.set( innerclass.uniqueName, innerclass );
 
                 // add class to the references set of the outer item
                 currentItem.referencesSet.add( innerclass );
             } );
 
             // store item in xref map
-            crossReferenceMap.set( currentItem.name, currentItem );
+            crossReferenceMap.set( currentItem.uniqueName, currentItem );
 
         } );
     } );
@@ -457,11 +500,11 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let independentItemList = [];
     let listByType = new Map();
     let dependencyCount = 0;
-    let theSelectedItem = crossReferenceMap.get( selectedItem );
+    let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
     sortedClassReferenceArray.forEach( anItem => {
         // if an item was specified, filter by it
         let itemDoesNotHaveReferences = ( theSelectedItem 
-                && anItem.name !== selectedItem
+                && anItem.uniqueName !== selectedItemUniqueName
                 && ! anItem.referencesSet.has( theSelectedItem )
                 && ! theSelectedItem.referencesSet.has( anItem )
                 && ! anItem.checkReferenceSet( theSelectedItem )
@@ -471,29 +514,30 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         }
 
         // skip elements that were not specified in the command line
-        if( classFlag && anItem.itemType.type != CLASSType ) {
+        // BUT if an item was selected, include in the graph regardless of type if it has references
+        if( ! theSelectedItem && ( classFlag && anItem.itemType.type != CLASSType ) ) {
             return;
         }
-        if( triggerFlag && anItem.itemType.type != TRIGGERType ) {
+        if( ! theSelectedItem && ( triggerFlag && anItem.itemType.type != TRIGGERType ) ) {
             return;
         }
-        if( lwcFlag && anItem.itemType.type != LWCType ) {
+        if( ! theSelectedItem && ( lwcFlag && anItem.itemType.type != LWCType ) ) {
             return;
         }
-        if( auraFlag && anItem.itemType.type != AURAType ) {
+        if( ! theSelectedItem && ( auraFlag && anItem.itemType.type != AURAType ) ) {
             return;
         }
-        if( flowFlag && anItem.itemType.type != FLOWType ) {
+        if( ! theSelectedItem && ( flowFlag && anItem.itemType.type != FLOWType ) ) {
             // this would show classes that reference flows but also classes that reference other classes
             // && anItem.itemType.type != CLASSType ) {
             return;
         }
-        if( vfpageFlag && anItem.itemType.type != PAGEType ) {
+        if( ! theSelectedItem && ( vfpageFlag && anItem.itemType.type != PAGEType ) ) {
             return;
         }
 
         // display items that do not have dependencies as a single shape
-        if( !anItem.referencesSet || anItem.referencesSet.size == 0 ) {
+        if( ! anItem.referencesSet || anItem.referencesSet.size == 0 ) {
             independentItemList.push( `${anItem.displayName}` );
             // return; // removed because it left some items without color
         }
@@ -555,8 +599,12 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 + ( auraFlag ? 'Aura components' : '' )
                 + ( flowFlag ? 'flows' : '' )
                 + ( vfpageFlag ? 'VisualForce pages/components' : '' );
-        vscode.window.showInformationMessage( `Dependency Graph:  No ${element} found in project folder ${projectFolder}.` );
-        console.log( `Dependency Graph:  No ${element} found in project folder ${projectFolder}.` );
+        let noDependencyMsg = `Dependency Graph:  No ${element} dependencies found`
+                + ( theSelectedItem ? ` for ${theSelectedItem.displayName}` : '' )
+                + ` in project folder ${projectFolder}`;
+
+        vscode.window.showInformationMessage( noDependencyMsg );
+        console.log( noDependencyMsg );
         return;
     }
 

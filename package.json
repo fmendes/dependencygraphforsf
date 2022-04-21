@@ -2,7 +2,7 @@
 	"name": "dependencygraphforsf",
 	"displayName": "DependencyGraphForSF",
 	"description": "Creates dependency graphs for LWC, Aura, VisualForce, Apex Classes, Triggers and Flows",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"icon": "images/DependencyGraphForSF.png",
 	"galleryBanner": {
 		"color": "#ECECEC",
