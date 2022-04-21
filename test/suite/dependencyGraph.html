@@ -1,0 +1,20 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
+<body><h2>Apex Classes Dependency Graph for /Users/fmendes/Projects/DependencyGraphForSF/dependencygraphforsf/test/suite<br><br>Number of Dependencies: 2</h2>
+<div id="theGraph" class="mermaid">
+
+graph LR
+TopLevelClass-CLASS(TopLevelClass CLASS) --> LeftClass-CLASS(LeftClass CLASS<br><br>instantiation)
+TopLevelClass-CLASS(TopLevelClass CLASS) --> RightClass-CLASS(RightClass CLASS<br><br>instantiation)
+LeftClass-CLASS(LeftClass CLASS)
+RightClass-CLASS(RightClass CLASS)
+independentItems(ITEMS WITH NO DEPENDENCIES:<br><br>LeftClass CLASS<br>RightClass CLASS)
+
+classDef CLASS fill:lightblue,stroke-width:4px;
+class TopLevelClass-CLASS,LeftClass-CLASS,RightClass-CLASS CLASS
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:'loose'}); 
+setTimeout( () => { var theGraph = document.querySelector("#theGraph SVG"); 
+theGraph.setAttribute("height","100%"); }, 1000 );</script>
+</body></html>

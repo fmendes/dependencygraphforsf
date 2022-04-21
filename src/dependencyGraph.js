@@ -17,21 +17,30 @@
 // INITIALIZATION
 const vscode = require('vscode');
 const fs = require('fs');
+const process = require('process');
+
+let folderDelimiter = '/';
+if( process.platform === 'win32' ) {
+    folderDelimiter = '\\';
+}
 
 var getAdjustedProjectFolder = ( projectFolder ) => {
     const path = require( 'path' );
-    projectFolder = path.resolve( projectFolder );
+    projectFolder = path.resolve( projectFolder ); 
+
+    // fix windows paths
+    projectFolder = projectFolder.replace( '\\c%3A', '' );
 
     if( ! projectFolder.includes( 'force-app' ) ) {
-        return projectFolder + '/force-app/main/default';
+        return projectFolder + `${folderDelimiter}force-app${folderDelimiter}main${folderDelimiter}default`;
     }
 
     if( ! projectFolder.includes( 'main' ) ) {
-        return  projectFolder + '/main/default';
+        return  projectFolder + `${folderDelimiter}main${folderDelimiter}default`;
     }
 
     if( ! projectFolder.includes( 'default' ) ) {
-        return projectFolder + '/default';
+        return projectFolder + `${folderDelimiter}default`;
     }
 
     return null;
@@ -62,8 +71,8 @@ class ItemType {
     }
     getItemList( projectFolder ) {
         // collect items in folder
-        console.log( `Looking for /${this.folder} in folder:  ${projectFolder}` );
-        let path = `${projectFolder}/${this.folder}`;
+        console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
+        let path = `${projectFolder}${folderDelimiter}${this.folder}`;
         let fileList = this.readDirIfItExists( path );
         
         fileList = fileList.filter( fileName => this.validateFileName( fileName ) );
@@ -71,7 +80,7 @@ class ItemType {
         let itemList = fileList.map( fileName => { 
             return new ItemData( fileName.substring( 0, fileName.length - this.extension.length )
                             , this
-                            , `${path}/${fileName}` );
+                            , `${path}${folderDelimiter}${fileName}` );
         } );
 
         return itemList;
@@ -140,8 +149,8 @@ class JSItemType extends ItemType {
     }
     getItemList( projectFolder ) {
         // collect items in folder
-        console.log( `Looking for /${this.folder} in folder:  ${projectFolder}` );
-        let path = `${projectFolder}/${this.folder}`;
+        console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
+        let path = `${projectFolder}${folderDelimiter}${this.folder}`;
 
         let subfolderList = this.readDirIfItExists( path );
         if( subfolderList.length === 0 ) {
@@ -155,7 +164,7 @@ class JSItemType extends ItemType {
             }
             return new ItemData( subfolder
                             , this
-                            , `${path}/${subfolder}/${subfolder}${this.extension}` );
+                            , `${path}${folderDelimiter}${subfolder}${folderDelimiter}${subfolder}${this.extension}` );
         } );
 
         return itemList;
@@ -186,13 +195,13 @@ class JSItemType extends ItemType {
 class VFItemType extends ItemType {
     getItemList( projectFolder ) {
         // collect items in folder
-        console.log( `Looking for /${this.folder} in folder:  ${projectFolder}` );
-        let path = `${projectFolder}/${this.folder}`;
+        console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
+        let path = `${projectFolder}${folderDelimiter}${this.folder}`;
         let fileList = this.readDirIfItExists( path );
 
         // include VF components too
-        console.log( `Looking for /components in folder:  ${projectFolder}` );
-        let componentPath = `${projectFolder}/components`;
+        console.log( `Looking for ${folderDelimiter}components in folder:  ${projectFolder}` );
+        let componentPath = `${projectFolder}${folderDelimiter}components`;
         let componentFileList = this.readDirIfItExists( componentPath );
         if( componentFileList.length > 0 ) {
             fileList.push( ...componentFileList );
@@ -208,11 +217,11 @@ class VFItemType extends ItemType {
 
         let itemList = fileList.map( fileName => {
             let itemName = fileName.substring( 0, fileName.length - this.extension.length );
-            let filePath = `${path}/${fileName}`;
+            let filePath = `${path}${folderDelimiter}${fileName}`;
             // handle VF components
             if( fileName.endsWith( '.component' ) ) {
                 itemName = fileName.substring( 0, fileName.length - '.component'.length );
-                filePath = `${projectFolder}/components/${fileName}`;
+                filePath = `${projectFolder}${folderDelimiter}components${folderDelimiter}${fileName}`;
             }
             return new ItemData( itemName, this, filePath );
         } );
@@ -241,6 +250,7 @@ class ItemData {
     constructor( aName, anItemType, filePath ) {
         this.name = aName;
         this.itemType = anItemType;
+
         // this is for when a class and another item have the same name
         this.uniqueName = `${aName}-${anItemType.type}`;
         this.filePath = filePath;
@@ -248,8 +258,10 @@ class ItemData {
         this.referencedCount = 0;
         this.methodReferencesSet = new Set();
         this.additionalInfo = '';
+
         // this is to display the item in the graph
         this.displayName = `${aName} ${anItemType.type}`;
+
         // componentName is really a "expression to look for when checking if this item is referenced"
         this.componentName = anItemType.getComponentName( aName );
     }
@@ -280,9 +292,6 @@ class ItemData {
         if( ! fs.existsSync( aFilePath ) ) {
             return '';
         }
-        // if( verboseFlag ) {
-        //     console.log( `Reading ${this.itemType.type}:  ${this.name} at ${aFilePath}` );
-        // }
         return fs.readFileSync( aFilePath, 'utf8' );
     }
     getReferenceSet( theText, className ) {
@@ -292,7 +301,6 @@ class ItemData {
         if( foundReferences && foundReferences.length > 0 ) {
             methodReferenceSet.add( ...foundReferences );
         }
-        //console.log( 'methodReferenceSet', methodReferenceSet );
 
         return methodReferenceSet;
     }
@@ -329,7 +337,6 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     const dependencyLimit = 700;    
 
     // set proper folder location according to first parameter
-    //let projectFolder = '.';
     let adjustedProjectFolder = getAdjustedProjectFolder( projectFolder );
     if( !adjustedProjectFolder ) {
         vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
@@ -339,7 +346,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     projectFolder = adjustedProjectFolder;
 
     // determine which parameter flags were passed
-    let lowerCaseArgs = myArgs.map( param => param.toLowerCase() );
+    let lowerCaseArgs = ( myArgs? myArgs.map( param => param.toLowerCase() ): [] );
     let triggerFlag = lowerCaseArgs.includes( '--trigger' );
     let lwcFlag = lowerCaseArgs.includes( '--lwc' );
     let auraFlag = lowerCaseArgs.includes( '--aura' );
@@ -347,21 +354,16 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let vfpageFlag = lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' );
     let classFlag = !triggerFlag && !lwcFlag && !auraFlag && !flowFlag && !vfpageFlag;
 
-    //let verboseFlag = myArgs.includes( '--verbose' );
-
     // this is the basis of the dependency graph
     let crossReferenceMap = new Map();
     
-
     // collect file paths for each of the item types and collect references in each file
     itemTypeMap.forEach( ( itemType ) => {
+        // create item data for each item type from the files
         let itemListForType = itemType.fetchItemsFromFolder( projectFolder );
         if( itemListForType == null ) {
             return;
         }
-
-        // // store list of files per each type
-        // itemType.itemsList = itemListForType;
 
         // check the contents of each item/file
         itemListForType.forEach( currentItem => {
@@ -389,13 +391,6 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                         return;
                     }
 
-                    // // detect and collect method calls in a set
-                    // let methodReferencesSet = currentItem.getReferenceSet( itemText, anItem.name );
-                    // if( methodReferencesSet.size > 0 ) {
-                    //     // add method to inner class record without duplicates
-                    //     anItem.methodReferencesSet.add( ...methodReferencesSet );
-                    // }
-
                     // increase referenced count
                     anItem.referencedCount++;
                     
@@ -419,7 +414,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
                 // detect and collect method calls in a set
                 let methodReferencesSet = currentItem.getReferenceSet( itemText, innerclass.name );
-                // commented out because not all method references are detected
+
+                // commented out because not all method references were detected
                 // if( methodReferencesSet.size == 0 ) {
                 //     return;
                 // }
@@ -464,13 +460,13 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let theSelectedItem = crossReferenceMap.get( selectedItem );
     sortedClassReferenceArray.forEach( anItem => {
         // if an item was specified, filter by it
-        let itemHasReferences = ( theSelectedItem 
-            && anItem.name !== selectedItem
-            && ! anItem.referencesSet.has( theSelectedItem )
-            && ! theSelectedItem.referencesSet.has( anItem )
-            && ! anItem.checkReferenceSet( theSelectedItem )
-            && ! theSelectedItem.checkReferenceSet( anItem ) );
-        if( itemHasReferences ) {
+        let itemDoesNotHaveReferences = ( theSelectedItem 
+                && anItem.name !== selectedItem
+                && ! anItem.referencesSet.has( theSelectedItem )
+                && ! theSelectedItem.referencesSet.has( anItem )
+                && ! anItem.checkReferenceSet( theSelectedItem )
+                && ! theSelectedItem.checkReferenceSet( anItem ) );
+        if( itemDoesNotHaveReferences ) {
             return;
         }
 
@@ -499,7 +495,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         // display items that do not have dependencies as a single shape
         if( !anItem.referencesSet || anItem.referencesSet.size == 0 ) {
             independentItemList.push( `${anItem.displayName}` );
-            // return; // removed because it makes some items not colored
+            // return; // removed because it left some items without color
         }
 
         // highlight in orange items that dependend on 6+ other items
@@ -516,7 +512,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
-            if( itemHasReferences 
+            if( itemDoesNotHaveReferences 
                     && aReference !== theSelectedItem
                     && ! aReference.referencesSet.has( theSelectedItem ) ) {
                 return;
@@ -543,10 +539,6 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // encode flow from a dependant item to a referenced item
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName}) --> ${aReference.uniqueName}${methodList}\n`;
             graphDefinition += dependencyFlow;
-
-            // if( verboseFlag ) {
-            //     console.log( `graphDefinition with dependencies:`, dependencyFlow );
-            // }
         } );
 
         // prepare Mermaid output for items that don't have dependencies but are referenced by other items
@@ -563,8 +555,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 + ( auraFlag ? 'Aura components' : '' )
                 + ( flowFlag ? 'flows' : '' )
                 + ( vfpageFlag ? 'VisualForce pages/components' : '' );
-        vscode.window.showInformationMessage( `Dependency Graph:  No ${element} found in project.` );
-        console.log( `Dependency Graph:  No ${element} found in project.` );
+        vscode.window.showInformationMessage( `Dependency Graph:  No ${element} found in project folder ${projectFolder}.` );
+        console.log( `Dependency Graph:  No ${element} found in project folder ${projectFolder}.` );
         return;
     }
 
@@ -589,9 +581,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let independentItemElement = ( independentItemList.length === 0 ? '' :
                     'independentItems(ITEMS WITH NO DEPENDENCIES:<br><br>' + independentItemList.join( '<br>' ) + ')\n' );
 
-    let fullPath = projectFolder.replace( '/force-app', '' )
-                            .replace( '/main', '' )
-                            .replace( '/default', '' );
+    let fullPath = projectFolder.replace( `${folderDelimiter}force-app`, '' )
+                            .replace( `${folderDelimiter}main`, '' )
+                            .replace( `${folderDelimiter}default`, '' );
 
     let theHeader = ( triggerFlag ? 'Triggers ' : '' )
                 + ( lwcFlag ? 'LWCs ' : '' )
@@ -617,16 +609,22 @@ theGraph.setAttribute("height","100%"); }, 1000 );</script>
 </body></html>`;
 
     // delete old file and save new HTML page with dependency graph
-    let depGraphPath = `${fullPath}/dependencyGraph.html`;
+    let depGraphPath = `${fullPath}${folderDelimiter}dependencyGraph.html`;
     if( fs.existsSync( depGraphPath ) ) {
         fs.unlinkSync( depGraphPath );
     }
     fs.writeFileSync( depGraphPath, graphHTML );
-    //vscode.window.showInformationMessage( `Dependency Graph:  File dependencyGraph.html written successfully on ${fullPath}` );
-    //console.log( `File dependencyGraph.html written successfully on ${fullPath}` );
+    console.log( `File dependencyGraph.html written successfully on ${fullPath}` );
 
-    // open dependency graph in default browser
-    vscode.env.openExternal( vscode.Uri.parse( `${fullPath}/dependencyGraph.html` ) );
+    // open dependency graph in default browser 
+    if( process.platform === 'win32' ) {
+        console.log( `Attempting to open browser with file:${folderDelimiter}${folderDelimiter}${folderDelimiter}${depGraphPath}` );
+        const exec = require('child_process').exec;
+        exec( `start file:${folderDelimiter}${folderDelimiter}${folderDelimiter}${depGraphPath}` );
+    } else { 
+        console.log( `Attempting to open browser with ${depGraphPath}` );
+        vscode.env.openExternal( vscode.Uri.parse( depGraphPath ) );
+    }
     vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
 
     // // open browser with dependency graph
@@ -640,4 +638,6 @@ theGraph.setAttribute("height","100%"); }, 1000 );</script>
 
 module.exports = {
     createGraph
+    , ItemType
+    , CLASSType, TRIGGERType, AURAType, LWCType, FLOWType, PAGEType
 }
