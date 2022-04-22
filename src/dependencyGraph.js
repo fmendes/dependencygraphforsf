@@ -17,6 +17,7 @@
 // INITIALIZATION
 const vscode = require('vscode');
 const fs = require('fs');
+const DisplayGraph = require('./DisplayGraph.js');
 const process = require('process');
 
 let folderDelimiter = '/';
@@ -47,6 +48,15 @@ var getAdjustedProjectFolder = ( projectFolder ) => {
 }
 var getUniqueName = ( aName, aType ) => {
     return `${aName}-${aType}`;
+}
+var getGraphTypeFromFlags = ( classFlag, triggerFlag, lwcFlag, auraFlag
+                            , flowFlag, vfpageFlag ) => {
+    return ( classFlag ? 'Classes' : '' )
+    + ( triggerFlag ? 'Triggers' : '' )
+    + ( lwcFlag ? 'LWCs' : '' )
+    + ( auraFlag ? 'Aura Components' : '' )
+    + ( flowFlag ? 'Flows' : '' )
+    + ( vfpageFlag ? 'VisualForce Pages/Components' : '' );
 }
 
 class ItemType {
@@ -94,7 +104,7 @@ class ItemType {
         let reMatchReferences = new RegExp( instantiationExpression, 'g' );
         let foundClassInstantiation = theText.match( reMatchReferences );
 
-        reMatchReferences = new RegExp( `${itemName}\\.[^ <>]*?\\(`, 'g' );
+        reMatchReferences = new RegExp( `${itemName}\\.[^ <>]*?\\(?`, 'g' );
         let foundStaticMethodCall = theText.match( reMatchReferences );
 
         // finds references to a flow within a class:  Flow.Interview.flowName
@@ -108,6 +118,11 @@ class ItemType {
 
         // clean up the references
         foundReferences = foundReferences.map( ( aReference ) => {
+            // class is referenced but no method name probably means reference to a constant
+            if( aReference === `${itemName}.` ) {
+                return 'reference';
+            }
+            // clean up characters that Mermaid JS doesn't like
             return aReference.replace( `${itemName}.`, '' ).replace( '(', '' ).replace( /\..*/gi, '' )
                                         .replace( instantiationExpression, 'instantiation' )
                                         .replace( `new ${itemName}`, 'instantiation' )
@@ -592,96 +607,19 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         }
     } );
 
-    if( graphDefinition === '' ) {
-        let element = ( classFlag ? 'classes' : '' )
-                + ( triggerFlag ? 'triggers' : '' )
-                + ( lwcFlag ? 'LWCs' : '' )
-                + ( auraFlag ? 'Aura components' : '' )
-                + ( flowFlag ? 'flows' : '' )
-                + ( vfpageFlag ? 'VisualForce pages/components' : '' );
-        let noDependencyMsg = `Dependency Graph:  No ${element} dependencies found`
-                + ( theSelectedItem ? ` for ${theSelectedItem.displayName}` : '' )
-                + ` in project folder ${projectFolder}`;
-
-        vscode.window.showInformationMessage( noDependencyMsg );
-        console.log( noDependencyMsg );
-        return;
-    }
-
-    // add CSS class to elements with more references
-    let styleSheetList = '';
-    if( elementsWithMoreRefs.length > 0 ) {
-        styleSheetList = `\nclassDef moreRefs fill:orange,stroke-width:4px;\nclass ${elementsWithMoreRefs} moreRefs\n`;
-    }
-
-    // add CSS class for each type of item
-    listByType.forEach( ( aListItem, itemType ) => {
-        let color = itemTypeMap.get( itemType ).color;
-        styleSheetList += `\nclassDef ${itemType} fill:${color},stroke-width:4px;\nclass ${aListItem} ${itemType}\n`;
-    } );
-
-    // highlight the selected item in the graph
-    if( theSelectedItem ) {
-        styleSheetList += `\nclassDef ${selectedItem}Item stroke:red,stroke-width:8px;\nclass ${theSelectedItem.uniqueName} ${selectedItem}Item\n`;
-    }
-
-    // build HTML page with dependency graph
-    let independentItemElement = ( independentItemList.length === 0 ? '' :
-                    'independentItems(ITEMS WITH NO DEPENDENCIES:<br><br>' + independentItemList.join( '<br>' ) + ')\n' );
-
     let fullPath = projectFolder.replace( `${folderDelimiter}force-app`, '' )
                             .replace( `${folderDelimiter}main`, '' )
                             .replace( `${folderDelimiter}default`, '' );
+    let graphType = getGraphTypeFromFlags( classFlag, triggerFlag, lwcFlag
+                                , auraFlag, flowFlag, vfpageFlag );
 
-    let theHeader = ( triggerFlag ? 'Triggers ' : '' )
-                + ( lwcFlag ? 'LWCs ' : '' )
-                + ( auraFlag ? 'Aura Components ' : '' )
-                + ( flowFlag ? 'Flows ' : '' )
-                + ( classFlag ? 'Apex Classes ' : '' )
-                + ( vfpageFlag ? 'Visualforce Pages ' : '' )
-            + `Dependency Graph for ${fullPath}`
-            + ( theSelectedItem ? `<br>Dependencies for ${theSelectedItem.displayName}` : '' )
-            + `<br><br>Number of Dependencies: ${dependencyCount}`
-            + ( dependencyCount == dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
+    let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItem );
 
-    // build page with everything and script to adjust height of graph
-    let graphHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
-<body><h2>${theHeader}</h2>
-<div id="theGraph" class="mermaid">\n
-graph LR\n${graphDefinition}${independentItemElement}${styleSheetList}
-</div>
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:\'loose\'}); 
-setTimeout( () => { var theGraph = document.querySelector("#theGraph SVG"); 
-theGraph.setAttribute("height","100%"); }, 1000 );</script>
-</body></html>`;
+    let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
-    // delete old file and save new HTML page with dependency graph
-    let depGraphPath = `${fullPath}${folderDelimiter}dependencyGraph.html`;
-    if( fs.existsSync( depGraphPath ) ) {
-        fs.unlinkSync( depGraphPath );
-    }
-    fs.writeFileSync( depGraphPath, graphHTML );
-    console.log( `File dependencyGraph.html written successfully on ${fullPath}` );
-
-    // open dependency graph in default browser 
-    if( process.platform === 'win32' ) {
-        console.log( `Attempting to open browser with file:${folderDelimiter}${folderDelimiter}${folderDelimiter}${depGraphPath}` );
-        const exec = require('child_process').exec;
-        exec( `start file:${folderDelimiter}${folderDelimiter}${folderDelimiter}${depGraphPath}` );
-    } else { 
-        console.log( `Attempting to open browser with ${depGraphPath}` );
-        vscode.env.openExternal( vscode.Uri.parse( depGraphPath ) );
-    }
-    vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-
-    // // open browser with dependency graph
-    // const open = require('open');
-    // (async () => {
-    //     await open( `${fullPath}/dependencyGraph.html`, {wait: false} );
-    //     vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-    //     //console.log( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-    // }) ();
+    DisplayGraph.displayGraph( graphDefinition, graphType, fullPath
+        , styleSheetList, selectedItemDisplayName, independentItemList
+        , dependencyCount, dependencyLimit );
 }
 
 module.exports = {

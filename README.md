@@ -34,6 +34,10 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 
 ## Release Notes
 
+### 1.0.8
+
+Better detection of non-method references
+
 ### 1.0.7
 
 Enhanced the seeking of dependencies when an item is right-clicked
