@@ -25,7 +25,7 @@ if( process.platform === 'win32' ) {
     folderDelimiter = '\\';
 }
 
-var getAdjustedProjectFolder = ( projectFolder ) => {
+var getSourceCodeFolder = ( projectFolder ) => {
     const path = require( 'path' );
     projectFolder = path.resolve( projectFolder ); 
 
@@ -33,15 +33,15 @@ var getAdjustedProjectFolder = ( projectFolder ) => {
     projectFolder = projectFolder.replace( '\\c%3A', '' );
 
     if( ! projectFolder.includes( 'force-app' ) ) {
-        return projectFolder + `${folderDelimiter}force-app${folderDelimiter}main${folderDelimiter}default`;
+        return `${projectFolder}${folderDelimiter}force-app${folderDelimiter}main${folderDelimiter}default`;
     }
 
     if( ! projectFolder.includes( 'main' ) ) {
-        return  projectFolder + `${folderDelimiter}main${folderDelimiter}default`;
+        return `${projectFolder}${folderDelimiter}main${folderDelimiter}default`;
     }
 
     if( ! projectFolder.includes( 'default' ) ) {
-        return projectFolder + `${folderDelimiter}default`;
+        return `${projectFolder}${folderDelimiter}default`;
     }
 
     return null;
@@ -49,14 +49,13 @@ var getAdjustedProjectFolder = ( projectFolder ) => {
 var getUniqueName = ( aName, aType ) => {
     return `${aName}-${aType}`;
 }
-var getGraphTypeFromFlags = ( classFlag, triggerFlag, lwcFlag, auraFlag
-                            , flowFlag, vfpageFlag ) => {
-    return ( classFlag ? 'Classes' : '' )
-    + ( triggerFlag ? 'Triggers' : '' )
-    + ( lwcFlag ? 'LWCs' : '' )
-    + ( auraFlag ? 'Aura Components' : '' )
-    + ( flowFlag ? 'Flows' : '' )
-    + ( vfpageFlag ? 'VisualForce Pages/Components' : '' );
+var getGraphTypeDescription = ( graphType ) => {
+    return ( graphType === CLASSType ? 'Classes' : 
+            graphType === TRIGGERType ? 'Triggers' : 
+            graphType === LWCType ? 'LWCs' : 
+            graphType === AURAType ? 'Aura Components' : 
+            graphType === FLOWType ? 'Flows' : 
+            graphType === PAGEType ? 'VisualForce Pages/Components' : '' );
 }
 
 class ItemType {
@@ -66,6 +65,7 @@ class ItemType {
         this.extension = extension;
         this.color = color;
         this.hasJS = false;
+        this.path = '';
     }
     getComponentName( aName ) {
         return aName;
@@ -82,18 +82,22 @@ class ItemType {
         }
         return ( fileList ? fileList : [] );
     }
-    getItemList( projectFolder ) {
+    getFileListFromFolder( projectFolder ) {
         // collect items in folder
         console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
-        let path = `${projectFolder}${folderDelimiter}${this.folder}`;
-        let fileList = this.readDirIfItExists( path );
+        // side effect:  sets this.path
+        this.path = `${projectFolder}${folderDelimiter}${this.folder}`;
+        return this.readDirIfItExists( this.path );
+    }
+    getItemList( projectFolder ) {
+        let fileList = this.getFileListFromFolder( projectFolder );
         
         fileList = fileList.filter( fileName => this.validateFileName( fileName ) );
 
         let itemList = fileList.map( fileName => { 
             return new ItemData( fileName.substring( 0, fileName.length - this.extension.length )
                             , this
-                            , `${path}${folderDelimiter}${fileName}` );
+                            , `${this.path}${folderDelimiter}${fileName}` );
         } );
 
         return itemList;
@@ -166,11 +170,7 @@ class JSItemType extends ItemType {
         return componentName;
     }
     getItemList( projectFolder ) {
-        // collect items in folder
-        console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
-        let path = `${projectFolder}${folderDelimiter}${this.folder}`;
-
-        let subfolderList = this.readDirIfItExists( path );
+        let subfolderList = this.getFileListFromFolder( projectFolder );
         if( subfolderList.length === 0 ) {
             return null;
         }
@@ -182,7 +182,7 @@ class JSItemType extends ItemType {
             }
             return new ItemData( subfolder
                             , this
-                            , `${path}${folderDelimiter}${subfolder}${folderDelimiter}${subfolder}${this.extension}` );
+                            , `${this.path}${folderDelimiter}${subfolder}${folderDelimiter}${subfolder}${this.extension}` );
         } );
 
         return itemList;
@@ -212,10 +212,7 @@ class JSItemType extends ItemType {
 }
 class VFItemType extends ItemType {
     getItemList( projectFolder ) {
-        // collect items in folder
-        console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
-        let path = `${projectFolder}${folderDelimiter}${this.folder}`;
-        let fileList = this.readDirIfItExists( path );
+        let fileList = this.getFileListFromFolder( projectFolder );
 
         // include VF components too
         console.log( `Looking for ${folderDelimiter}components in folder:  ${projectFolder}` );
@@ -235,7 +232,7 @@ class VFItemType extends ItemType {
 
         let itemList = fileList.map( fileName => {
             let itemName = fileName.substring( 0, fileName.length - this.extension.length );
-            let filePath = `${path}${folderDelimiter}${fileName}`;
+            let filePath = `${this.path}${folderDelimiter}${fileName}`;
             // handle VF components
             if( fileName.endsWith( '.component' ) ) {
                 itemName = fileName.substring( 0, fileName.length - '.component'.length );
@@ -371,44 +368,26 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     const dependencyLimit = 700;    
 
     // set proper folder location according to first parameter
-    let adjustedProjectFolder = getAdjustedProjectFolder( projectFolder );
-    if( !adjustedProjectFolder ) {
+    let sourceCodeFolder = getSourceCodeFolder( projectFolder );
+    if( ! sourceCodeFolder ) {
         vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
         console.log( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
         return;
     }
-    projectFolder = adjustedProjectFolder;
 
     // determine which parameter flags were passed
     let lowerCaseArgs = ( myArgs? myArgs.map( param => param.toLowerCase() ): [] );
-    let triggerFlag = lowerCaseArgs.includes( '--trigger' );
-    let lwcFlag = lowerCaseArgs.includes( '--lwc' );
-    let auraFlag = lowerCaseArgs.includes( '--aura' );
-    let flowFlag = lowerCaseArgs.includes( '--flow' );
-    let vfpageFlag = lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' );
-    let classFlag = !triggerFlag && !lwcFlag && !auraFlag && !flowFlag && !vfpageFlag;
+    let graphType = lowerCaseArgs.includes( '--trigger' ) ? TRIGGERType :
+                    lowerCaseArgs.includes( '--lwc' ) ? LWCType :
+                    lowerCaseArgs.includes( '--aura' ) ? AURAType :
+                    lowerCaseArgs.includes( '--flow' ) ? FLOWType :
+                    lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' ) ? PAGEType :
+                    CLASSType;
 
     // get unique name to identify selected item
     let selectedItemUniqueName;
     if( selectedItem ) {
-        if( classFlag ) {
-            selectedItemUniqueName = getUniqueName( selectedItem, CLASSType );
-        }
-        if( triggerFlag ) {
-            selectedItemUniqueName = getUniqueName( selectedItem, TRIGGERType );
-        }
-        if( lwcFlag ) {
-            selectedItemUniqueName = getUniqueName( selectedItem, LWCType );
-        }
-        if( auraFlag ) {
-            selectedItemUniqueName = getUniqueName( selectedItem, AURAType );
-        }
-        if( flowFlag ) {
-            selectedItemUniqueName = getUniqueName( selectedItem, FLOWType );
-        }
-        if( vfpageFlag ) {
-            selectedItemUniqueName = getUniqueName( selectedItem, PAGEType );
-        }
+        selectedItemUniqueName = getUniqueName( selectedItem, graphType );
     }
 
     // this is the basis of the dependency graph
@@ -417,7 +396,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     // collect file paths for each of the item types and collect references in each file
     itemTypeMap.forEach( ( itemType ) => {
         // create item data for each item type from the files
-        let itemListForType = itemType.fetchItemsFromFolder( projectFolder );
+        let itemListForType = itemType.fetchItemsFromFolder( sourceCodeFolder );
         if( itemListForType == null ) {
             return;
         }
@@ -437,10 +416,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // if LWC flag was specified, it will attempt to find LWCs in the file and so forth
             // for Flows, it will look for references in other flows and classes too
             // BUT if an item is selected, it will look for references to that item in all files regardless
-            if( selectedItemUniqueName || ( lwcFlag && itemType.type === LWCType ) 
-                    || ( auraFlag && itemType.type === AURAType ) 
-                    || ( vfpageFlag && itemType.type === PAGEType ) 
-                    || ( flowFlag && itemType.type === FLOWType ) ) {
+            if( selectedItemUniqueName 
+                    || ( itemType.type === graphType
+                        && graphType !== CLASSType && graphType !== TRIGGERType ) ) {
 
                 let anItemList = itemTypeMap.get( itemType.type ).itemsList;
                 anItemList.forEach( anItem => {
@@ -500,8 +478,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         } );
     } );
 
-    // sort by descending order the classes by their referenced count + count of references to other classes
-    // to hopefully make the graph more legible
+    // sort by descending order the classes by their referenced count + count of references 
+    // to other classes and hopefully make the graph more legible
     let sortedClassReferenceArray = [...crossReferenceMap.values()].sort( 
         (a, b) => {
             let difference = b.referencedCount + b.referencesSet.size - a.referencedCount - a.referencesSet.size;
@@ -516,6 +494,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let listByType = new Map();
     let dependencyCount = 0;
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
+
     sortedClassReferenceArray.forEach( anItem => {
         // if an item was specified, filter by it
         let itemDoesNotHaveReferences = ( theSelectedItem 
@@ -528,27 +507,14 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             return;
         }
 
-        // skip elements that were not specified in the command line
-        // BUT if an item was selected, include in the graph regardless of type if it has references
-        if( ! theSelectedItem && ( classFlag && anItem.itemType.type != CLASSType ) ) {
-            return;
-        }
-        if( ! theSelectedItem && ( triggerFlag && anItem.itemType.type != TRIGGERType ) ) {
-            return;
-        }
-        if( ! theSelectedItem && ( lwcFlag && anItem.itemType.type != LWCType ) ) {
-            return;
-        }
-        if( ! theSelectedItem && ( auraFlag && anItem.itemType.type != AURAType ) ) {
-            return;
-        }
-        if( ! theSelectedItem && ( flowFlag && anItem.itemType.type != FLOWType ) ) {
-            // this would show classes that reference flows but also classes that reference other classes
-            // && anItem.itemType.type != CLASSType ) {
-            return;
-        }
-        if( ! theSelectedItem && ( vfpageFlag && anItem.itemType.type != PAGEType ) ) {
-            return;
+        // if an item was selected, include references in the graph regardless of type
+        if( ! theSelectedItem ) {
+            // BUT if no item was selected, skip elements that were not specified in the command line
+
+            // check if the current item is the type that was specified in the command line
+            if( anItem.itemType.type != graphType ) {
+                return;
+            }
         }
 
         // display items that do not have dependencies as a single shape
@@ -607,19 +573,16 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         }
     } );
 
-    let fullPath = projectFolder.replace( `${folderDelimiter}force-app`, '' )
-                            .replace( `${folderDelimiter}main`, '' )
-                            .replace( `${folderDelimiter}default`, '' );
-    let graphType = getGraphTypeFromFlags( classFlag, triggerFlag, lwcFlag
-                                , auraFlag, flowFlag, vfpageFlag );
+    let graphTypeDescription = getGraphTypeDescription( graphType );
 
-    let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItem );
+    let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap
+                                                    , listByType, theSelectedItem );
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
-    DisplayGraph.displayGraph( graphDefinition, graphType, fullPath
-        , styleSheetList, selectedItemDisplayName, independentItemList
-        , dependencyCount, dependencyLimit );
+    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
+                            , styleSheetList, selectedItemDisplayName, independentItemList
+                            , dependencyCount, dependencyLimit );
 }
 
 module.exports = {

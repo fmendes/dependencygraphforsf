@@ -36,7 +36,7 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 
 ### 1.0.8
 
-Better detection of non-method references
+Better detection of non-method references, refactoring and new tests
 
 ### 1.0.7
 

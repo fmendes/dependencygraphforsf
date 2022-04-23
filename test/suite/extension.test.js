@@ -10,9 +10,10 @@ const DependencyGraph = require('../../src/dependencyGraph.js');
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
 
+	let anItemType = new DependencyGraph.ItemType( 
+				DependencyGraph.CLASSType, 'classes', '.cls', 'lightblue' );
+
 	test('Parsing references test', () => {
-		let anItemType = new DependencyGraph.ItemType( 
-					DependencyGraph.CLASSType, 'classes', '.cls', 'lightblue' );
 		let theText = `public with sharing class DSController
 	public static void mapColors(){
 		if(colors == null){ 
@@ -32,8 +33,6 @@ suite('Extension Test Suite', () => {
 	} );
 
 	test('Parsing references in unformatted class test', () => {
-		let anItemType = new DependencyGraph.ItemType( 
-					DependencyGraph.CLASSType, 'classes', '.cls', 'lightblue' );
 		let theText = `public with sharing class IODSController
 	private static void mapColors(){
 		if(colors == null){ 
@@ -50,8 +49,6 @@ suite('Extension Test Suite', () => {
 	} );
 
 	test('Parsing class instantiation test', () => {
-		let anItemType = new DependencyGraph.ItemType( 
-					DependencyGraph.CLASSType, 'classes', '.cls', 'lightblue' );
 		let theText = `
 public with sharing class TopLevelClass {
 

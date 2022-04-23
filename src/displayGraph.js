@@ -23,6 +23,8 @@ if( process.platform === 'win32' ) {
 }
 
 function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItem ) {
+    // returns a list of styles from the elements in the graph
+
     // add CSS class to elements with more references
     let styleSheetList = ( elementsWithMoreRefs.length > 0 ? 
         `\nclassDef moreRefs fill:orange,stroke-width:4px;\nclass ${elementsWithMoreRefs} moreRefs\n` 
@@ -44,6 +46,7 @@ function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelect
 function displayGraph( graphDefinition, graphType, fullPath
             , styleSheetList, selectedItemDisplayName, independentItemList
             , dependencyCount, dependencyLimit ) {
+    // creates HTML containing graph and displays it
 
     if( graphDefinition === '' ) {
         let noDependencyMsg = `Dependency Graph:  No ${graphType} dependencies found`
@@ -80,6 +83,8 @@ theGraph.setAttribute("height","100%"); }, 1000 );</script>
 }
 
 function openBrowserWithGraph( fullPath, graphHTML ) {
+    // saves HTML file containing graph and opens it in browser
+
     // delete old file and save new HTML page with dependency graph
     let depGraphPath = `${fullPath}${folderDelimiter}dependencyGraph.html`;
     if( fs.existsSync( depGraphPath ) ) {
