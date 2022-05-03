@@ -13,3 +13,4 @@ All notable changes to the "dependencygraphforsf" extension will be documented i
 - 1.0.6 release:  Bug fix for Windows version
 - 1.0.7 release:  Enhanced the seeking of dependencies when an item is right-clicked
 - 1.0.8 release:  Better detection of non-method references, refactoring and new tests
+- 1.0.9 release:  Fixed handling of folder names with spaces
