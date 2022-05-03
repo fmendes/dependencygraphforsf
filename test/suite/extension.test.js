@@ -81,6 +81,8 @@ public with sharing class TopLevelClass {
 	});
 
 	test('Graph test', () => {
+		//const folderPath = '/Users/fmendes/Projects/DependencyGraphForSF/dependencygraphforsf/test/suite with spaces';
+
 		const folderPath = '/Users/fmendes/Projects/DependencyGraphForSF/dependencygraphforsf/test/suite';//'./test/suite';
 		const fileName = null;
 		DependencyGraph.createGraph( folderPath, fileName, [ '--classes' ] );

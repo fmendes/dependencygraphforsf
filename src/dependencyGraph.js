@@ -368,6 +368,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     const dependencyLimit = 700;    
 
     // set proper folder location according to first parameter
+    projectFolder = projectFolder.replace( /%20/g, ' ' );
     let sourceCodeFolder = getSourceCodeFolder( projectFolder );
     if( ! sourceCodeFolder ) {
         vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
