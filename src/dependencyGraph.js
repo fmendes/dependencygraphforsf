@@ -27,6 +27,10 @@ if( process.platform === 'win32' ) {
 
 var getSourceCodeFolder = ( projectFolder ) => {
     const path = require( 'path' );
+
+    // fix Windows path
+    projectFolder = projectFolder.replace( /\/\/\/(\w)\%3A/g, '$1:' );
+
     projectFolder = path.resolve( projectFolder ); 
 
     // fix windows paths
@@ -371,8 +375,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     projectFolder = projectFolder.replace( /%20/g, ' ' );
     let sourceCodeFolder = getSourceCodeFolder( projectFolder );
     if( ! sourceCodeFolder ) {
-        vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
         console.log( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
+        vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
         return;
     }
 
@@ -581,7 +585,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
-    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
+    // replaced projectFolder with sourceCodeFolder to address Windows path issue
+    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, sourceCodeFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
                             , dependencyCount, dependencyLimit );
 }
