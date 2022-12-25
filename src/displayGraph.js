@@ -90,7 +90,14 @@ function openBrowserWithGraph( fullPath, graphHTML ) {
     if( fs.existsSync( depGraphPath ) ) {
         fs.unlinkSync( depGraphPath );
     }
-    fs.writeFileSync( depGraphPath, graphHTML );
+
+    try{ 
+        fs.writeFileSync( depGraphPath, graphHTML );
+    } catch( excpt ) {
+        console.error( `Dependency Graph:  could not save graph file ${fullPath}.` );
+        vscode.window.showErrorMessage( `Dependency Graph:  could not save graph file ${fullPath}.` );
+        return;
+    }
     console.log( `File dependencyGraph.html written successfully on ${fullPath}` );
 
     // open dependency graph in default browser 

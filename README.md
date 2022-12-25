@@ -34,6 +34,10 @@ Sometimes when you open the same graph twice in a row, the graph is displayed sl
 
 ## Release Notes
 
+### 1.0.10
+
+Fixed handling of folder names in Windows appearing as ///c%3a
+
 ### 1.0.9
 
 Fixed handling of folder names with spaces

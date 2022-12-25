@@ -1,7 +1,27 @@
+When starting in a new environment:
+
+ 1) install NPM on Windows:  https://nodejs.org/en/download/
+ 2) on command prompt, check versions: 
+    node -v
+    v18.12.1
+    npm -v
+    8.19.2
+ 3) install vsce:
+    npm install -g @vscode/vsce
+ 4) cd .\Projects\dependencygraphforsf\
+
+
 As per https://www.freecodecamp.org/news/making-vscode-extension/, for each new release:
+https://code.visualstudio.com/api/working-with-extensions/publishing-extension
 
 1) update the version in package.json
 2) update the CHANGELOG.md
 3) update the release notes in README.md
 4) run vsce package
 5) run vsce publish
+
+
+If you get the error "vsce.ps1 cannot be loaded because running scripts is disabled on this system":
+
+ 1) start Terminal (Admin) (PowerShell) and type  Get-ExecutionPolicy -List
+ 2) if LocalMachine is Restricted, type Set-ExecutionPolicy RemoteSigned
