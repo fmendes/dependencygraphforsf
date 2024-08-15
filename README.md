@@ -1,3 +1,7 @@
+This repo is fork of dependencygraphofsf
+
+Doing enhancements for getting permissions
+
 # Dependency Graph for Salesforce
 
 This extension scans the Salesforce metadata and code stored in /force-app/main/default to extract class/method names and find dependencies between them then opens a dependency graph in an HTML page using Mermaid JS.
