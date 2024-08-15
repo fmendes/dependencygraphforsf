@@ -638,7 +638,6 @@ function createGraph(projectFolder, selectedItem, myArgs) {
             let methodList = aReference.getFormattedMethodReferenceStringList();
 
             // TODO:  come up with a way to make the arrows display the methods they reference
-
             // TODO:  come up with a way to display tooltips
 
             // encode flow from a dependant item to a referenced item
