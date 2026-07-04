@@ -154,7 +154,8 @@ body { transition: background-color 0.2s; }
 #theGraph { zoom: 1; }
 
 /* night mode: dark page, light edges and labels */
-body.dark { background-color: #1e1e1e; color: #ddd; }
+body.dark { background-color: #1e1e1e !important; color: #ddd; }
+body.dark #theGraph, body.dark #theGraph svg { background-color: #1e1e1e !important; }
 body.dark #toolbar { background: #1e1e1e; border-bottom-color: #444; }
 body.dark #toolbar input, body.dark #toolbar button { background: #333; color: #ddd; border: 1px solid #555; }
 body.dark #theGraph .edgePath path, body.dark #theGraph path.flowchart-link { stroke: #bbb !important; }

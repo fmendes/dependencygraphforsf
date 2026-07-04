@@ -139,6 +139,10 @@ suite('Graph page toolbar', () => {
         const graph = readAndDeleteGraph();
         assert.ok(graph.includes('function toggleDarkMode'), 'expected the dark mode toggle script');
         assert.ok(graph.includes('body.dark #theGraph .edgePath path'), 'expected dark-mode edge styling');
+        assert.ok(
+            graph.includes('body.dark #theGraph, body.dark #theGraph svg { background-color: #1e1e1e !important; }'),
+            'expected dark background override on the diagram container and SVG'
+        );
         assert.ok(graph.includes('prefers-color-scheme: dark'), 'expected OS preference detection');
         assert.ok(graph.includes('function zoomBy'), 'expected the zoom script');
         assert.ok(graph.includes('zoomBy(0.2)') && graph.includes('zoomBy(-0.2)'), 'expected zoom in/out buttons');
