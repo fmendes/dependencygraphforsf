@@ -19,6 +19,9 @@ Activate with Ctrl + Shift + P or right click a folder or file then select one o
 - **Depth control** — the selected-item graph includes items up to `selectedItemDepth` hops away (default 2); set it to 1 for direct dependencies only.
 - **Flows calling Apex** — invocable action calls and Apex-defined types in flows are detected and labeled on the edge.
 - **Triggers show their sObject** — trigger graphs include an `on` edge to the sObject the trigger fires on (light green cylinder).
+- **sObject usage graph** — the "Dependency graph for sObjects" command shows which classes and triggers read (SOQL) or write (DML) each sObject; enter an sObject name to see everything that touches it (e.g. Account).
+- **Circular dependency highlighting** — items that form reference cycles get a red dashed border, and the header reports the count.
+- **Orphans report** — lists disconnected items (no references in or out — dead-code candidates) and unreferenced items, with clickable links.
 - **Packaged flows are excluded** — flows from managed packages (names with a `namespace__` prefix) are filtered out so they don't clutter the big picture.
 - **Multi-package projects** — all `packageDirectories` from `sfdx-project.json` are scanned and merged into a single graph, so cross-package dependencies show up.
 
@@ -69,10 +72,13 @@ None currently. (The earlier issue where the same graph rendered differently on 
 ### 1.1.1
 
 - Graph opens in a VS Code webview panel (configurable via `renderIn`)
-- Search/filter box and SVG/PNG export buttons in the graph toolbar
+- Search/filter box, day/night toggle, zoom controls and SVG/PNG export in the graph toolbar
 - Depth control for the selected-item graph (`selectedItemDepth`)
 - Flows calling invocable Apex are detected and labeled
 - Triggers show an edge to the sObject they fire on
+- New command: sObject usage graph (which classes/triggers read or write each sObject)
+- Circular dependencies highlighted with a red dashed border
+- New command: orphans report (disconnected and unreferenced items)
 
 ### 1.1.0
 
