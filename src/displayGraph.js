@@ -170,7 +170,6 @@ body { background-color: white !important; color: #111 !important; transition: b
 #toolbar { position: sticky; top: 0; background: white; padding: 8px 0; border-bottom: 1px solid #ccc; z-index: 10; }
 #searchBox { padding: 4px 8px; width: 260px; }
 #toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
-#theGraph { zoom: 1; }
 #independentItems { font-size: 11px; border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px; margin-top: 12px; }
 #independentItems h3 { margin: 0 0 6px 0; font-size: 12px; }
 #independentItems p { margin: 0; line-height: 1.6; }
@@ -189,8 +188,8 @@ body.dark #theGraph .edgeLabel rect { fill: #333 !important; }
 <body><h2>${theHeader}</h2>
 <div id="toolbar">
 <input id="searchBox" type="text" placeholder="Filter nodes..." oninput="filterNodes(this.value)">
-<button onclick="zoomBy(0.2)" title="Zoom in">+</button>
-<button onclick="zoomBy(-0.2)" title="Zoom out">&minus;</button>
+<button onclick="zoomBy(1.25)" title="Zoom in">+</button>
+<button onclick="zoomBy(0.8)" title="Zoom out">&minus;</button>
 <button onclick="zoomReset()" title="Reset zoom">100%</button>
 <button id="darkToggle" onclick="toggleDarkMode()" title="Toggle day/night mode">&#127769;</button>
 <button onclick="exportSVG()">Export SVG</button>
@@ -248,14 +247,37 @@ function filterNodes(term) {
   });
 }
 
+// zoom works on the SVG itself:  Mermaid renders it with width/max-width 100%
+// (fit to page), so zooming the container would only re-fit to the same width.
+// The zoom level multiplies the FITTED width (what 100% shows), setting
+// explicit pixel dimensions so scrollbars appear when the graph outgrows
+// the page.
 var zoomLevel = 1;
-function zoomBy(step) {
-  zoomLevel = Math.max(0.2, Math.round((zoomLevel + step) * 10) / 10);
-  document.getElementById('theGraph').style.zoom = zoomLevel;
+function applyZoom() {
+  var svg = document.querySelector('#theGraph svg');
+  if (!svg) { return; }
+  if (zoomLevel === 1) {
+    // fitted view, as Mermaid renders it
+    svg.style.maxWidth = '100%';
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', '100%');
+    return;
+  }
+  var viewBox = svg.viewBox && svg.viewBox.baseVal;
+  if (!viewBox || !viewBox.width) { return; }
+  var fittedWidth = document.getElementById('theGraph').clientWidth;
+  var targetWidth = fittedWidth * zoomLevel;
+  svg.style.maxWidth = 'none';
+  svg.setAttribute('width', targetWidth + 'px');
+  svg.setAttribute('height', ( targetWidth * viewBox.height / viewBox.width ) + 'px');
+}
+function zoomBy(factor) {
+  zoomLevel = Math.max(0.2, Math.round(zoomLevel * factor * 100) / 100);
+  applyZoom();
 }
 function zoomReset() {
   zoomLevel = 1;
-  document.getElementById('theGraph').style.zoom = 1;
+  applyZoom();
 }
 
 function applyDarkMode(enabled) {

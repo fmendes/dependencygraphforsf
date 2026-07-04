@@ -154,7 +154,11 @@ suite('Graph page toolbar', () => {
         );
         assert.ok(graph.includes('prefers-color-scheme: dark'), 'expected OS preference detection');
         assert.ok(graph.includes('function zoomBy'), 'expected the zoom script');
-        assert.ok(graph.includes('zoomBy(0.2)') && graph.includes('zoomBy(-0.2)'), 'expected zoom in/out buttons');
+        assert.ok(graph.includes('zoomBy(1.25)') && graph.includes('zoomBy(0.8)'), 'expected zoom in/out buttons');
+        // zoom must resize the SVG itself from its viewBox — zooming the
+        // container only re-fits the width-constrained SVG to the same page
+        assert.ok(graph.includes('svg.viewBox && svg.viewBox.baseVal'), 'expected viewBox-based zoom');
+        assert.ok(graph.includes("svg.style.maxWidth = 'none'"), 'expected max-width release when zoomed in');
         assert.ok(graph.includes('zoomReset()'), 'expected the zoom reset button');
     });
 
