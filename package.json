@@ -74,6 +74,13 @@
 					"minimum": 0,
 					"description": "Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to 2 to hide leaf nodes and reduce clutter in large orgs. 0 means show everything."
 				},
+				"dependencygraphforsf.selectedItemDepth": {
+					"type": "integer",
+					"default": 2,
+					"minimum": 1,
+					"maximum": 10,
+					"description": "How many hops away from the selected item to include in its dependency graph. 1 shows only direct dependencies/dependents; 2 (default) includes grandparents and grandchildren."
+				},
 				"dependencygraphforsf.sourceFolders": {
 					"type": "array",
 					"items": { "type": "string" },

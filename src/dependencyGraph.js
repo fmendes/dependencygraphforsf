@@ -290,6 +290,18 @@ class FlowItemType extends ItemType {
             && ! fileName.includes( '__' )
             && fileName.endsWith( this.extension );
     }
+    findReference( theText, itemName ) {
+        // finds references from a flow to an Apex class in the flow XML:
+        // invocable actions and Apex-defined screen component classes
+        let foundReferences = [];
+        if( theText.includes( `<actionName>${itemName}</actionName>` ) ) {
+            foundReferences.push( 'invocable action' );
+        }
+        if( theText.includes( `<apexClass>${itemName}</apexClass>` ) ) {
+            foundReferences.push( 'apex defined type' );
+        }
+        return foundReferences;
+    }
 }
 
 const CLASSType = 'CLASS', TRIGGERType = 'TRIGGER', AURAType = 'AURA', LWCType = 'LWC'
@@ -372,18 +384,6 @@ class ItemData {
 
         return `(${this.displayName}<br>${methodReferencesText})`;
     }
-    checkReferenceSet( anItem ) {
-        // check if the references contain a reference to the item
-        // (check "grand children")
-        if( ! this.referencesSet ) {
-            return false;
-        }
-        let found = [...this.referencesSet].find( 
-                        aReference => aReference.referencesSet 
-                                    && aReference.referencesSet.has( anItem ) );
-
-        return ! ! found;
-    }
 }
 
 //
@@ -412,6 +412,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
     const dependencyLimit = config.get( 'dependencyLimit', DEPENDENCY_LIMIT );
     const minConnections = config.get( 'minConnections', 0 );
+    const selectedItemDepth = config.get( 'selectedItemDepth', 2 );
 
     // resolve project root (handles spaces and Windows URL-encoded paths)
     const path = require( 'path' );
@@ -464,6 +465,14 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             let itemText = currentItem.getItemTextFromFile();
             if( ! itemText ) {
                 return;
+            }
+
+            // triggers declare their sObject in the header:  trigger X on Account (...)
+            if( itemType.type === TRIGGERType ) {
+                let triggerHeader = itemText.match( /\btrigger\s+\w+\s+on\s+(\w+)/i );
+                if( triggerHeader ) {
+                    currentItem.additionalInfo = triggerHeader[ 1 ];
+                }
             }
 
             // identify the references the current item has to a LWC/Aura/VF and store in map
@@ -540,17 +549,54 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let listByType = new Map();
     let dependencyCount = 0;
     let clickBindings = new Map();
+    let sObjectNodes = new Set();
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
 
+    // when an item is selected, BFS out to selectedItemDepth hops in both
+    // directions (dependencies and dependents) to decide what stays in the graph
+    let includedSet = null;
+    if( theSelectedItem ) {
+        // reverse edges:  who references each item
+        let reverseReferenceMap = new Map();
+        crossReferenceMap.forEach( anItem => {
+            anItem.referencesSet.forEach( aReference => {
+                let referrers = reverseReferenceMap.get( aReference.uniqueName );
+                if( ! referrers ) {
+                    referrers = new Set();
+                    reverseReferenceMap.set( aReference.uniqueName, referrers );
+                }
+                referrers.add( anItem );
+            } );
+        } );
+
+        includedSet = new Set( [ theSelectedItem ] );
+        let frontier = [ theSelectedItem ];
+        for( let hop = 0; hop < selectedItemDepth; hop++ ) {
+            let nextFrontier = [];
+            frontier.forEach( anItem => {
+                anItem.referencesSet.forEach( aReference => {
+                    if( ! includedSet.has( aReference ) ) {
+                        includedSet.add( aReference );
+                        nextFrontier.push( aReference );
+                    }
+                } );
+                let referrers = reverseReferenceMap.get( anItem.uniqueName );
+                if( referrers ) {
+                    referrers.forEach( aReferrer => {
+                        if( ! includedSet.has( aReferrer ) ) {
+                            includedSet.add( aReferrer );
+                            nextFrontier.push( aReferrer );
+                        }
+                    } );
+                }
+            } );
+            frontier = nextFrontier;
+        }
+    }
+
     sortedClassReferenceArray.forEach( anItem => {
-        // if an item was specified, filter by it
-        let itemDoesNotHaveReferences = ( theSelectedItem 
-                && anItem.uniqueName !== selectedItemUniqueName
-                && ! anItem.referencesSet.has( theSelectedItem )
-                && ! theSelectedItem.referencesSet.has( anItem )
-                && ! anItem.checkReferenceSet( theSelectedItem )
-                && ! theSelectedItem.checkReferenceSet( anItem ) );
-        if( itemDoesNotHaveReferences ) {
+        // if an item was selected, keep only items within selectedItemDepth hops of it
+        if( includedSet && ! includedSet.has( anItem ) ) {
             return;
         }
 
@@ -576,7 +622,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         clickBindings.set( anItem.uniqueName, anItem.filePath );
 
         // display items that do not have dependencies as a single shape
-        if( ! anItem.referencesSet || anItem.referencesSet.size === 0 ) {
+        // (triggers with an sObject edge are not independent)
+        if( ( ! anItem.referencesSet || anItem.referencesSet.size === 0 )
+                && ! ( anItem.itemType.type === TRIGGERType && anItem.additionalInfo ) ) {
             independentItemList.push( `${anItem.displayName}` );
         }
 
@@ -592,14 +640,20 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             listByType.set( anItem.itemType.type, list );
         }
 
+        // triggers get an edge to the sObject they fire on
+        if( anItem.itemType.type === TRIGGERType && anItem.additionalInfo ) {
+            let sObject = anItem.additionalInfo;
+            sObjectNodes.add( sObject );
+            graphDefinition += `${anItem.uniqueName}(${anItem.displayName}) -->|on| sobj_${sObject}[(${sObject})]\n`;
+        }
+
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
-            if( itemDoesNotHaveReferences 
-                    && aReference !== theSelectedItem
-                    && ! aReference.referencesSet.has( theSelectedItem ) ) {
+            // keep only edges between items that survived the depth filter
+            if( includedSet && ! includedSet.has( aReference ) ) {
                 return;
             }
-        
+
             // limit number of elements in graph due to mermaid.js limit
             if( dependencyCount >= dependencyLimit ) {
                 return;
@@ -623,6 +677,12 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             graphDefinition += dependencyFlow;
         }
     } );
+
+    // style sObject nodes as light green cylinders
+    if( sObjectNodes.size > 0 && graphDefinition !== '' ) {
+        graphDefinition += `classDef sObjectNode fill:lightgreen,stroke-width:1px;\n`
+            + `class ${[...sObjectNodes].map( s => 'sobj_' + s ).join( ',' )} sObjectNode\n`;
+    }
 
     // append click directives so nodes open their source file in VS Code
     if( graphDefinition !== '' ) {
