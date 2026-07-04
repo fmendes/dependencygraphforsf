@@ -55,6 +55,29 @@
 				"title": "Dependency graph for the selected item"
 			}
 		],
+		"configuration": {
+			"title": "DependencyGraphForSF",
+			"properties": {
+				"dependencygraphforsf.dependencyLimit": {
+					"type": "integer",
+					"default": 700,
+					"minimum": 100,
+					"description": "Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering)."
+				},
+				"dependencygraphforsf.minConnections": {
+					"type": "integer",
+					"default": 0,
+					"minimum": 0,
+					"description": "Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to 2 to hide leaf nodes and reduce clutter in large orgs. 0 means show everything."
+				},
+				"dependencygraphforsf.sourceFolders": {
+					"type": "array",
+					"items": { "type": "string" },
+					"default": [],
+					"description": "Override source folder paths to scan (relative to project root, e.g. [\"my-package/main/default\"]). Leave empty to auto-detect from sfdx-project.json, or fall back to force-app/main/default."
+				}
+			}
+		},
 		"menus": {
 			"editor/context": [
 				{

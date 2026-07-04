@@ -66,7 +66,11 @@ function displayGraph( graphDefinition, graphType, fullPath
     let theHeader = `${graphType} Dependency Graph for ${fullPath}`
             + ( selectedItemDisplayName ? `<br>Dependencies for ${selectedItemDisplayName}` : '' )
             + `<br><br>Number of Dependencies: ${dependencyCount}`
-            + ( dependencyCount === dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
+            + ( dependencyCount === dependencyLimit
+                ? `<br>WARNING: Graph is limited to ${dependencyCount} edges.`
+                  + ` To reduce clutter: right-click a specific item to scope the graph,`
+                  + ` or raise "Minimum Connections" in Settings &rarr; Extensions &rarr; DependencyGraphForSF.`
+                : '' );
 
     // build page with everything and script to adjust height of graph
     let graphHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
