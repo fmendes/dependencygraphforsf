@@ -278,6 +278,36 @@ function exportPNG() {
 </body></html>`;
 }
 
+function buildReportHTML( theHeader, bodyHTML ) {
+    // builds a simple HTML report page with clickable vscode://file links
+    // that work both in a browser and in a VS Code webview
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<style>
+body { font-family: sans-serif; margin: 20px; }
+li { margin: 2px 0; }
+@media (prefers-color-scheme: dark) {
+  body { background-color: #1e1e1e; color: #ddd; }
+  a { color: #6cb6ff; }
+}
+</style></head>
+<body><h2>${theHeader}</h2>
+${bodyHTML}
+<script>
+var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
+document.addEventListener('click', function(e) {
+  if (!vscodeApi) { return; }
+  var link = e.target.closest('a');
+  if (!link) { return; }
+  var href = link.getAttribute('href');
+  if (href && href.indexOf('vscode://file') === 0) {
+    e.preventDefault();
+    vscodeApi.postMessage({ command: 'openFile', href: href });
+  }
+});
+</script>
+</body></html>`;
+}
+
 function openBrowserWithGraph( fullPath, graphHTML, fileName = 'dependencyGraph.html' ) {
     // saves HTML file containing graph and opens it in browser
 
@@ -308,6 +338,7 @@ module.exports = {
     getStyleSheet,
     displayGraph,
     buildGraphHTML,
+    buildReportHTML,
     presentGraph,
     openBrowserWithGraph
 }

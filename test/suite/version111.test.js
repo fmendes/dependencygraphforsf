@@ -155,6 +155,47 @@ suite('Graph page toolbar', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Orphans report
+// ---------------------------------------------------------------------------
+suite('Orphans report', () => {
+    function readAndDeleteReport() {
+        const reportPath = path.join(SUITE_FOLDER, 'orphansReport.html');
+        const html = fs.readFileSync(reportPath, 'utf8');
+        fs.unlinkSync(reportPath);
+        return html;
+    }
+
+    test('disconnected items are listed with clickable links', () => {
+        DependencyGraph.createOrphansReport(SUITE_FOLDER);
+        const report = readAndDeleteReport();
+        assert.ok(report.includes('Disconnected items'), 'expected the disconnected section');
+        assert.ok(report.includes('StandaloneClass CLASS'), 'StandaloneClass is fully disconnected');
+        assert.ok(report.includes('ProcessorClass CLASS'), 'ProcessorClass references no other items');
+        assert.ok(
+            /<a href="vscode:\/\/file[^"]+StandaloneClass\.cls">/.test(report),
+            'expected a clickable link for StandaloneClass'
+        );
+    });
+
+    test('unreferenced items with outbound references are listed separately', () => {
+        DependencyGraph.createOrphansReport(SUITE_FOLDER);
+        const report = readAndDeleteReport();
+        assert.ok(report.includes('Unreferenced items'), 'expected the unreferenced section');
+        assert.ok(report.includes('HubClass CLASS'), 'HubClass references leaves but nothing references it');
+        assert.ok(report.includes('myComponent LWC'), 'top-level LWC is unreferenced');
+    });
+
+    test('referenced items and triggers are not listed', () => {
+        DependencyGraph.createOrphansReport(SUITE_FOLDER);
+        const report = readAndDeleteReport();
+        assert.ok(!report.includes('TopLevelClass CLASS'), 'TopLevelClass is referenced by several items');
+        assert.ok(!report.includes('AccountUpdater'), 'triggers are platform-invoked, never orphans');
+        assert.ok(!report.includes('SubFlow FLOW'), 'SubFlow is referenced by MainFlow');
+        assert.ok(!report.includes('CycleAClass'), 'cycle members reference each other');
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Depth control for the selected-item graph
 // ---------------------------------------------------------------------------
 suite('Selected item depth control', () => {

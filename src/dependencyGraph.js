@@ -466,48 +466,10 @@ function findCycleMembers( crossReferenceMap ) {
     return cycleMembers;
 }
 
-function createGraph( projectFolder, selectedItem, myArgs ) {
-
-    const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
-    const dependencyLimit = config.get( 'dependencyLimit', DEPENDENCY_LIMIT );
-    const minConnections = config.get( 'minConnections', 0 );
-    const selectedItemDepth = config.get( 'selectedItemDepth', 2 );
-
-    // resolve project root (handles spaces and Windows URL-encoded paths)
-    const path = require( 'path' );
-    projectFolder = path.resolve( projectFolder.replace( /%20/g, ' ' ).replace( /\/\/\/(\w)\%3A/g, '$1:' ) );
-
-    // clear cached item lists so repeated runs pick up file changes and new folders
-    itemTypeMap.forEach( itemType => { itemType.itemsList = null; } );
-
-    let sourceCodeFolders = getSourceCodeFolders( projectFolder );
-    if( ! sourceCodeFolders || sourceCodeFolders.length === 0 ) {
-        vscode.window.showErrorMessage(
-            `Dependency Graph: No source folders found under ${projectFolder}. `
-            + `Add an sfdx-project.json or set "sourceFolders" in extension settings.`
-        );
-        return;
-    }
-
-    // determine which parameter flags were passed
-    let lowerCaseArgs = ( myArgs? myArgs.map( param => param.toLowerCase() ): [] );
-    let graphType = lowerCaseArgs.includes( '--trigger' ) ? TRIGGERType :
-                    lowerCaseArgs.includes( '--lwc' ) ? LWCType :
-                    lowerCaseArgs.includes( '--aura' ) ? AURAType :
-                    lowerCaseArgs.includes( '--flow' ) ? FLOWType :
-                    lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' ) ? PAGEType :
-                    CLASSType;
-
-    // get unique name to identify selected item
-    let selectedItemUniqueName;
-    if( selectedItem ) {
-        selectedItemUniqueName = getUniqueName( selectedItem, graphType );
-    }
-
-    // this is the basis of the dependency graph
+function scanReferences( sourceCodeFolders, graphType, scanAllTypes ) {
+    // scans every item's file contents and builds the cross-reference map
     let crossReferenceMap = new Map();
-    
-    // collect file paths for each of the item types and collect references in each file
+
     itemTypeMap.forEach( ( itemType ) => {
         // create item data for each item type from the files
         let itemListForType = itemType.fetchItemsFromFolders( sourceCodeFolders );
@@ -534,11 +496,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 }
             }
 
-            // identify the references the current item has to a LWC/Aura/VF and store in map
-            // if LWC flag was specified, it will attempt to find LWCs in the file and so forth
-            // for Flows, it will look for references in other flows and classes too
-            // BUT if an item is selected, it will look for references to that item in all files regardless
-            if( selectedItemUniqueName 
+            // identify references between items of the same type (LWC→LWC, flow→flow, ...);
+            // classes are skipped here because the class loop below already covers them
+            if( ( scanAllTypes && itemType.type !== CLASSType )
                     || ( itemType.type === graphType
                         && graphType !== CLASSType && graphType !== TRIGGERType ) ) {
 
@@ -551,7 +511,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
                     // increase referenced count
                     anItem.referencedCount++;
-                    
+
                     // store referenced class in xref map
                     crossReferenceMap.set( anItem.uniqueName, anItem );
 
@@ -591,6 +551,50 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
         } );
     } );
+
+    return crossReferenceMap;
+}
+
+function createGraph( projectFolder, selectedItem, myArgs ) {
+
+    const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
+    const dependencyLimit = config.get( 'dependencyLimit', DEPENDENCY_LIMIT );
+    const minConnections = config.get( 'minConnections', 0 );
+    const selectedItemDepth = config.get( 'selectedItemDepth', 2 );
+
+    // resolve project root (handles spaces and Windows URL-encoded paths)
+    const path = require( 'path' );
+    projectFolder = path.resolve( projectFolder.replace( /%20/g, ' ' ).replace( /\/\/\/(\w)\%3A/g, '$1:' ) );
+
+    // clear cached item lists so repeated runs pick up file changes and new folders
+    itemTypeMap.forEach( itemType => { itemType.itemsList = null; } );
+
+    let sourceCodeFolders = getSourceCodeFolders( projectFolder );
+    if( ! sourceCodeFolders || sourceCodeFolders.length === 0 ) {
+        vscode.window.showErrorMessage(
+            `Dependency Graph: No source folders found under ${projectFolder}. `
+            + `Add an sfdx-project.json or set "sourceFolders" in extension settings.`
+        );
+        return;
+    }
+
+    // determine which parameter flags were passed
+    let lowerCaseArgs = ( myArgs? myArgs.map( param => param.toLowerCase() ): [] );
+    let graphType = lowerCaseArgs.includes( '--trigger' ) ? TRIGGERType :
+                    lowerCaseArgs.includes( '--lwc' ) ? LWCType :
+                    lowerCaseArgs.includes( '--aura' ) ? AURAType :
+                    lowerCaseArgs.includes( '--flow' ) ? FLOWType :
+                    lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' ) ? PAGEType :
+                    CLASSType;
+
+    // get unique name to identify selected item
+    let selectedItemUniqueName;
+    if( selectedItem ) {
+        selectedItemUniqueName = getUniqueName( selectedItem, graphType );
+    }
+
+    // this is the basis of the dependency graph
+    let crossReferenceMap = scanReferences( sourceCodeFolders, graphType, !!selectedItemUniqueName );
 
     // sort by descending order the classes by their referenced count + count of references 
     // to other classes and hopefully make the graph more legible
@@ -774,8 +778,66 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                             , dependencyCount, dependencyLimit, renderedCycleMembers.length );
 }
 
+function createOrphansReport( projectFolder ) {
+    // lists items nothing references:  disconnected (no references in or out)
+    // and unreferenced (they reference others, but nothing references them)
+    const path = require( 'path' );
+    projectFolder = path.resolve( projectFolder.replace( /%20/g, ' ' ).replace( /\/\/\/(\w)\%3A/g, '$1:' ) );
+
+    itemTypeMap.forEach( itemType => { itemType.itemsList = null; } );
+
+    let sourceCodeFolders = getSourceCodeFolders( projectFolder );
+    if( ! sourceCodeFolders || sourceCodeFolders.length === 0 ) {
+        vscode.window.showErrorMessage(
+            `Dependency Graph: No source folders found under ${projectFolder}. `
+            + `Add an sfdx-project.json or set "sourceFolders" in extension settings.`
+        );
+        return;
+    }
+
+    const crossReferenceMap = scanReferences( sourceCodeFolders, null, true );
+
+    // triggers are excluded:  the platform invokes them, so they are never referenced
+    const candidates = [...crossReferenceMap.values()]
+        .filter( anItem => anItem.itemType.type !== TRIGGERType && anItem.referencedCount === 0 )
+        .sort( ( a, b ) => a.displayName.localeCompare( b.displayName ) );
+
+    const disconnected = candidates.filter( anItem => anItem.referencesSet.size === 0 );
+    const unreferenced = candidates.filter( anItem => anItem.referencesSet.size > 0 );
+
+    if( candidates.length === 0 ) {
+        vscode.window.showInformationMessage( 'Dependency Graph: No orphans found — everything is referenced.' );
+        return;
+    }
+
+    const itemLink = ( anItem ) => {
+        let urlPath = anItem.filePath.replace( /\\/g, '/' );
+        if( ! urlPath.startsWith( '/' ) ) {
+            urlPath = '/' + urlPath;
+        }
+        return `<li><a href="vscode://file${encodeURI( urlPath )}">${anItem.displayName}</a></li>`;
+    };
+
+    const sectionHTML = ( title, note, itemList ) => ( itemList.length === 0 ? '' :
+        `<h3>${title} (${itemList.length})</h3><p>${note}</p><ul>${itemList.map( itemLink ).join( '' )}</ul>` );
+
+    const bodyHTML =
+        sectionHTML( 'Disconnected items'
+            , 'No references in or out. Strong candidates for dead code.'
+            , disconnected )
+        + sectionHTML( 'Unreferenced items'
+            , 'They reference other items, but nothing references them. '
+            + 'Some are legitimate entry points: top-level LWCs, batch/schedulable/REST classes, record-triggered flows.'
+            , unreferenced );
+
+    const theHeader = `Orphans Report for ${projectFolder}`;
+    const reportHTML = DisplayGraph.buildReportHTML( theHeader, bodyHTML );
+    DisplayGraph.presentGraph( projectFolder, reportHTML, 'orphansReport.html', 'Orphans Report' );
+}
+
 module.exports = {
     createGraph
+    , createOrphansReport
     , getSourceCodeFolders
     , ItemType
     , JSItemType

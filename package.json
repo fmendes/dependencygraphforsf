@@ -23,7 +23,8 @@
 		"onCommand:dependencygraphforsf.graphVisualforcePages",
 		"onCommand:dependencygraphforsf.graphItem",
 		"onCommand:dependencygraphforsf.graphClassInternals",
-		"onCommand:dependencygraphforsf.graphSObjects"
+		"onCommand:dependencygraphforsf.graphSObjects",
+		"onCommand:dependencygraphforsf.orphansReport"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -63,6 +64,10 @@
 			{
 				"command": "dependencygraphforsf.graphSObjects",
 				"title": "Dependency graph for sObjects (reads/writes)"
+			},
+			{
+				"command": "dependencygraphforsf.orphansReport",
+				"title": "Orphans report (items nothing references)"
 			}
 		],
 		"configuration": {

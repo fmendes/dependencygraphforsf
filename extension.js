@@ -121,6 +121,14 @@ function activate(context) {
 
 		SObjectGraph.createSObjectGraph( folderPath.replace( /%20/g, ' ' ), sObjectFilter || null );
 	}
+	let orphansReportHandler = () => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		DependencyGraph.createOrphansReport( folderPath.replace( /%20/g, ' ' ) );
+	}
 	let graphClassInternalsHandler = ( uri ) => {
 		let folderPath = getFolderPath();
 		if( ! folderPath ) {
@@ -149,9 +157,11 @@ function activate(context) {
 
 	let sObjectsHandler = vscode.commands.registerCommand('dependencygraphforsf.graphSObjects', graphSObjectsHandler );
 
+	let orphansHandler = vscode.commands.registerCommand('dependencygraphforsf.orphansReport', orphansReportHandler );
+
 	context.subscriptions.push( classHandler, triggerHandler, flowHandler
 					, lwcHandler, auraHandler, vfHandler, itemHandler
-					, classInternalsHandler, sObjectsHandler );
+					, classInternalsHandler, sObjectsHandler, orphansHandler );
 }
 
 function getFolderPath() {
