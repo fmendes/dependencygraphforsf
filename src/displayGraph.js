@@ -60,8 +60,19 @@ function displayGraph( graphDefinition, graphType, fullPath
     }
 
     // build HTML page with dependency graph
-    let independentItemElement = ( independentItemList.length === 0 ? '' :
-                    'independentItems(ITEMS WITH NO DEPENDENCIES:<br><br>' + independentItemList.join( '<br>' ) + ')\n' );
+    // list independent items in rows of several per line with a smaller font,
+    // so the box spreads horizontally instead of becoming a tall column
+    let independentItemElement = '';
+    if( independentItemList.length > 0 ) {
+        const ITEMS_PER_ROW = 5;
+        let rows = [];
+        for( let i = 0; i < independentItemList.length; i += ITEMS_PER_ROW ) {
+            rows.push( independentItemList.slice( i, i + ITEMS_PER_ROW ).join( ' &bull; ' ) );
+        }
+        independentItemElement = 'independentItems(ITEMS WITH NO DEPENDENCIES:<br>' + rows.join( '<br>' ) + ')\n'
+            + 'classDef independentsStyle font-size:10px;\n'
+            + 'class independentItems independentsStyle\n';
+    }
 
     let theHeader = `${graphType} Dependency Graph for ${fullPath}`
             + ( selectedItemDisplayName ? `<br>Dependencies for ${selectedItemDisplayName}` : '' )

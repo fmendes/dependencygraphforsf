@@ -171,6 +171,21 @@ suite('Graph page toolbar', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Independent items box layout
+// ---------------------------------------------------------------------------
+suite('Independent items box', () => {
+    test('items are laid out in rows with a smaller font', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        const boxLine = graph.split('\n').find(l => l.includes('ITEMS WITH NO DEPENDENCIES'));
+        assert.ok(boxLine, 'expected the independent items box');
+        assert.ok(boxLine.includes(' &bull; '), 'items should be joined horizontally with bullets');
+        assert.ok(graph.includes('classDef independentsStyle font-size:10px'), 'expected the smaller font style');
+        assert.ok(graph.includes('class independentItems independentsStyle'), 'expected the style applied to the box');
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Orphans report
 // ---------------------------------------------------------------------------
 suite('Orphans report', () => {
