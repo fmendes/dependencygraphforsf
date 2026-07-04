@@ -83,8 +83,6 @@ class ItemType {
         return ( fileList ? fileList : [] );
     }
     getFileListFromFolder( projectFolder ) {
-        // collect items in folder
-        console.log( `Looking for ${this.folder} in folder:  ${projectFolder}` );
         // side effect:  sets this.path
         this.path = `${projectFolder}${folderDelimiter}${this.folder}`;
         return this.readDirIfItExists( this.path );
@@ -133,7 +131,6 @@ class ItemType {
                                         .replace( flowRefExpression, 'flow' )
                                         .replace( /[^a-zA-Z\d\s:]/g, ' ' );
         } );
-        //console.log( `Found ${foundReferences.length} references to ${itemName}`, foundReferences );
         return foundReferences;
     }
     fetchItemsFromFolder( projectFolder ) {
@@ -142,7 +139,7 @@ class ItemType {
             return this.itemsList;
         }
         let itemListForType = this.getItemList( projectFolder );
-        if( itemListForType == null ) {
+        if( itemListForType === null || itemListForType === undefined ) {
             return;
         }
 
@@ -206,7 +203,6 @@ class JSItemType extends ItemType {
                                     .replace( /';/g, '' )
                                     .replace( /import .*? from '@salesforce\/apex\/.*?\./g, 'imported' );
         } );
-        //console.log( `Found ${foundReferences.length} references to ${itemName}`, foundReferences );
         return foundReferences;
     }
 }
@@ -215,7 +211,6 @@ class VFItemType extends ItemType {
         let fileList = this.getFileListFromFolder( projectFolder );
 
         // include VF components too
-        console.log( `Looking for ${folderDelimiter}components in folder:  ${projectFolder}` );
         let componentPath = `${projectFolder}${folderDelimiter}components`;
         let componentFileList = this.readDirIfItExists( componentPath );
         if( componentFileList.length > 0 ) {
@@ -363,16 +358,18 @@ class ItemData {
 //
 //
 
+const DEPENDENCY_LIMIT = 700;
+const HIGH_REF_THRESHOLD = 6;
+
 function createGraph( projectFolder, selectedItem, myArgs ) {
 
-    const dependencyLimit = 700;    
+    const dependencyLimit = DEPENDENCY_LIMIT;
 
     // set proper folder location according to first parameter
     projectFolder = projectFolder.replace( /%20/g, ' ' );
     let sourceCodeFolder = getSourceCodeFolder( projectFolder );
     if( ! sourceCodeFolder ) {
         vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
-        console.log( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
         return;
     }
 
@@ -398,7 +395,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     itemTypeMap.forEach( ( itemType ) => {
         // create item data for each item type from the files
         let itemListForType = itemType.fetchItemsFromFolder( sourceCodeFolder );
-        if( itemListForType == null ) {
+        if( !itemListForType ) {
             return;
         }
 
@@ -423,7 +420,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
                 let anItemList = itemTypeMap.get( itemType.type ).itemsList;
                 anItemList.forEach( anItem => {
-                    if( ! anItem || anItem.uniqueName == currentItem.uniqueName
+                    if( ! anItem || anItem.uniqueName === currentItem.uniqueName
                             || ! itemText.includes( anItem.componentName ) ) {
                         return;
                     }
@@ -434,8 +431,6 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                     // store referenced class in xref map
                     crossReferenceMap.set( anItem.uniqueName, anItem );
 
-                    // TODO:  store the interface of the item (public methods/attributes) and what sObjects it references
-
                     // add lwc to the references set of the outer item
                     currentItem.referencesSet.add( anItem );
                 } );
@@ -444,7 +439,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // identify the references the current item has to a class and store in map
             let classItemList = itemTypeMap.get( CLASSType ).itemsList;
             classItemList.forEach( innerclass => {
-                if( innerclass.uniqueName == currentItem.uniqueName
+                if( innerclass.uniqueName === currentItem.uniqueName
                         || ! itemText.includes( innerclass.componentName ) ) {
                     return;
                 }
@@ -452,16 +447,10 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 // detect and collect method calls in a set
                 let methodReferencesSet = currentItem.getReferenceSet( itemText, innerclass.name );
 
-                // commented out because not all method references were detected
-                // if( methodReferencesSet.size == 0 ) {
-                //     return;
-                // }
                 if( methodReferencesSet.size > 0 ) {
                     // add method to inner class record without duplicates
                     innerclass.methodReferencesSet.add( ...methodReferencesSet );
                 }
-
-                // TODO:  store the interface of the item (public methods/attributes) and what sObjects it references
 
                 // increase referenced count
                 innerclass.referencedCount++;
@@ -481,14 +470,14 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     // sort by descending order the classes by their referenced count + count of references 
     // to other classes and hopefully make the graph more legible
-    let sortedClassReferenceArray = [...crossReferenceMap.values()].sort( 
+    let sortedClassReferenceArray = [...crossReferenceMap.values()].sort(
         (a, b) => {
             let difference = b.referencedCount + b.referencesSet.size - a.referencedCount - a.referencesSet.size;
-            return difference !== 0 ? difference : b.referencesSet.size - a.referencesSet.size;
+            if( difference !== 0 ) { return difference; }
+            let sizeDiff = b.referencesSet.size - a.referencesSet.size;
+            return sizeDiff !== 0 ? sizeDiff : a.name.localeCompare( b.name );
         } );
 
-    // list classes and their references in mermaid format inside HTML
-    console.log( "Composing dependency graph..." );
     let graphDefinition = '';
     let elementsWithMoreRefs = [];
     let independentItemList = [];
@@ -513,19 +502,18 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // BUT if no item was selected, skip elements that were not specified in the command line
 
             // check if the current item is the type that was specified in the command line
-            if( anItem.itemType.type != graphType ) {
+            if( anItem.itemType.type !== graphType ) {
                 return;
             }
         }
 
         // display items that do not have dependencies as a single shape
-        if( ! anItem.referencesSet || anItem.referencesSet.size == 0 ) {
+        if( ! anItem.referencesSet || anItem.referencesSet.size === 0 ) {
             independentItemList.push( `${anItem.displayName}` );
-            // return; // removed because it left some items without color
         }
 
-        // highlight in orange items that dependend on 6+ other items
-        if( anItem.referencesSet.size >= 6 ) {
+        // highlight in orange items that depend on HIGH_REF_THRESHOLD+ other items
+        if( anItem.referencesSet.size >= HIGH_REF_THRESHOLD ) {
             elementsWithMoreRefs.push( anItem.uniqueName );
 
         } else {
@@ -550,25 +538,16 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             }
             dependencyCount++;
 
-            // TODO:  fix this:  if this reference is added with the methodList initially 
-            // and added again as referencer (hence without the methodList), 
-            // the methodList on the first instance is omitted from the graph
-            // potential solution:  add it again with the methodList at the end
-
             // add class dependency to the graph in Mermaid notation
             let methodList = aReference.getFormattedMethodReferenceStringList();
 
-            // TODO:  come up with a way to make the arrows display the methods they reference
-
-            // TODO:  come up with a way to display tooltips
-            
             // encode flow from a dependant item to a referenced item
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName}) --> ${aReference.uniqueName}${methodList}\n`;
             graphDefinition += dependencyFlow;
         } );
 
         // prepare Mermaid output for items that don't have dependencies but are referenced by other items
-        if( anItem.referencesSet.size == 0 && anItem.referencedCount > 0 ) {
+        if( anItem.referencesSet.size === 0 && anItem.referencedCount > 0 ) {
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName})\n`;
             graphDefinition += dependencyFlow;
         }

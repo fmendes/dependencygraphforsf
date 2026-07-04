@@ -26,10 +26,6 @@ const DependencyGraph = require('./src/dependencyGraph.js');
  */
 function activate(context) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	//console.log('Congratulations, your extension "dependencygraphforsf" is now active!');
-
 	let graphClassHandler = () => {
 		let folderPath = getFolderPath();
 		if( ! folderPath ) {
@@ -80,15 +76,12 @@ function activate(context) {
 	}
 	let graphItemHandler = ( uri ) => {
 		let folderPath = getFolderPath();
-		// console.log( folderPath );
-		// console.log( uri );
 		if( ! folderPath ) {
 			return;
 		}
 
 		let uriPathArray = uri.path.split( '.' );
 		let extension = uriPathArray.pop();
-		// console.log( extension );
 		let graphType = extension === 'cls' ? '--classes' :
 						extension === 'cls-meta.xml' ? '--classes' :
 						extension === 'trigger' ? '--trigger' :
@@ -101,14 +94,13 @@ function activate(context) {
 			graphType = '--flow';
 		}
 		if( uri.path.includes( 'js-meta.xml' ) ) {
-			graphType = '--lwc  ';
+			graphType = '--lwc';
 		}
 		if( ! graphType ) {
 			return;
 		}
 
 		let fileName = uriPathArray[ 0 ].split( '/' ).pop();
-		console.log( fileName );
 		DependencyGraph.createGraph( folderPath, fileName, [ graphType ] );
 	}
 

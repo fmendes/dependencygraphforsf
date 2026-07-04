@@ -54,7 +54,6 @@ function displayGraph( graphDefinition, graphType, fullPath
                 + ` in project folder ${fullPath}`;
 
         vscode.window.showInformationMessage( noDependencyMsg );
-        console.log( noDependencyMsg );
         return;
     }
 
@@ -65,7 +64,7 @@ function displayGraph( graphDefinition, graphType, fullPath
     let theHeader = `${graphType} Dependency Graph for ${fullPath}`
             + ( selectedItemDisplayName ? `<br>Dependencies for ${selectedItemDisplayName}` : '' )
             + `<br><br>Number of Dependencies: ${dependencyCount}`
-            + ( dependencyCount == dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
+            + ( dependencyCount === dependencyLimit ? `<br>WARNING:  Graph is limited to ${dependencyCount} dependencies.` : '' );
 
     // build page with everything and script to adjust height of graph
     let graphHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
@@ -74,9 +73,15 @@ function displayGraph( graphDefinition, graphType, fullPath
 graph LR\n${graphDefinition}${independentItemElement}${styleSheetList}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:\'loose\'}); 
-setTimeout( () => { var theGraph = document.querySelector("#theGraph SVG"); 
-theGraph.setAttribute("height","100%"); }, 1000 );</script>
+<script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:\'loose\'});
+(function() {
+  var el = document.querySelector("#theGraph");
+  var observer = new MutationObserver(function() {
+    var svg = el.querySelector("svg");
+    if (svg) { svg.setAttribute("height","100%"); observer.disconnect(); }
+  });
+  observer.observe(el, {childList:true, subtree:true});
+})();</script>
 </body></html>`;
 
     openBrowserWithGraph( fullPath, graphHTML );
@@ -85,32 +90,25 @@ theGraph.setAttribute("height","100%"); }, 1000 );</script>
 function openBrowserWithGraph( fullPath, graphHTML ) {
     // saves HTML file containing graph and opens it in browser
 
-    // delete old file and save new HTML page with dependency graph
     let depGraphPath = `${fullPath}${folderDelimiter}dependencyGraph.html`;
-    if( fs.existsSync( depGraphPath ) ) {
-        fs.unlinkSync( depGraphPath );
+    try {
+        if( fs.existsSync( depGraphPath ) ) {
+            fs.unlinkSync( depGraphPath );
+        }
+        fs.writeFileSync( depGraphPath, graphHTML );
+    } catch( err ) {
+        vscode.window.showErrorMessage( `Dependency Graph: Failed to write graph file — ${err.message}` );
+        return;
     }
-    fs.writeFileSync( depGraphPath, graphHTML );
-    console.log( `File dependencyGraph.html written successfully on ${fullPath}` );
 
-    // open dependency graph in default browser 
+    // open dependency graph in default browser
     if( process.platform === 'win32' ) {
-        console.log( `Attempting to open browser with file:${folderDelimiter}${folderDelimiter}${folderDelimiter}${depGraphPath}` );
         const exec = require('child_process').exec;
         exec( `start file:${folderDelimiter}${folderDelimiter}${folderDelimiter}${depGraphPath}` );
-    } else { 
-        console.log( `Attempting to open browser with ${depGraphPath}` );
+    } else {
         vscode.env.openExternal( vscode.Uri.parse( depGraphPath ) );
     }
     vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-
-    // // open browser with dependency graph
-    // const open = require('open');
-    // (async () => {
-    //     await open( `${fullPath}/dependencyGraph.html`, {wait: false} );
-    //     vscode.window.showInformationMessage( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-    //     //console.log( 'Dependency Graph:  The graph should now display on the browser (scroll down if needed).' );
-    // }) ();
 }
 
 module.exports = {
