@@ -49,11 +49,13 @@ function displayGraph( graphDefinition, graphType, fullPath
     // creates HTML containing graph and displays it
 
     if( graphDefinition === '' ) {
-        let noDependencyMsg = `Dependency Graph:  No ${graphType} dependencies found`
+        if( !process.env.DEPENDENCYGRAPH_TEST ) {
+            vscode.window.showInformationMessage(
+                `Dependency Graph:  No ${graphType} dependencies found`
                 + ( selectedItemDisplayName ? ` for ${selectedItemDisplayName}` : '' )
-                + ` in project folder ${fullPath}`;
-
-        vscode.window.showInformationMessage( noDependencyMsg );
+                + ` in project folder ${fullPath}`
+            );
+        }
         return;
     }
 
@@ -100,6 +102,8 @@ function openBrowserWithGraph( fullPath, graphHTML ) {
         vscode.window.showErrorMessage( `Dependency Graph: Failed to write graph file — ${err.message}` );
         return;
     }
+
+    if( process.env.DEPENDENCYGRAPH_TEST ) { return; }
 
     // open dependency graph in default browser
     if( process.platform === 'win32' ) {

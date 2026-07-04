@@ -1,3 +1,5 @@
+process.env.DEPENDENCYGRAPH_TEST = '1';
+
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
