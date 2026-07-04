@@ -204,7 +204,7 @@ ${footerHTML}
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
 
-mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'});
+mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},maxEdges:${maxEdges},flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'});
 
 // inside a webview, vscode:// links must not navigate: VS Code's own link
 // handler would ALSO open them (prompt + duplicate tab). Strip the hrefs

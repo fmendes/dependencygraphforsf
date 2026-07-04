@@ -201,6 +201,12 @@ suite('maxTextSize scaling', () => {
             graph.includes('flowchart:{maxEdges:1800}'),
             'expected maxEdges scaled from the dependency limit'
         );
+        // Mermaid 11.16 ignores the documented flowchart.maxEdges and only
+        // honors the top-level key, so both must be present
+        assert.ok(
+            graph.includes('maxTextSize:270000,maxEdges:1800,'),
+            'expected top-level maxEdges (the one Mermaid 11 actually reads)'
+        );
     });
 
     test('Mermaid CDN version is pinned to a major version', () => {
