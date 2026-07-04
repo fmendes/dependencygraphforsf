@@ -90,6 +90,28 @@ suite('Trigger sObject mapping', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Graph page toolbar: search/filter and export
+// ---------------------------------------------------------------------------
+suite('Graph page toolbar', () => {
+    test('generated HTML includes the search box and export buttons', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('id="searchBox"'), 'expected the filter input');
+        assert.ok(graph.includes('function filterNodes'), 'expected the filter script');
+        assert.ok(graph.includes('function exportSVG'), 'expected the SVG export script');
+        assert.ok(graph.includes('function exportPNG'), 'expected the PNG export script');
+    });
+
+    test('generated HTML carries the webview bridge for clicks and saves', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('acquireVsCodeApi'), 'expected webview API detection');
+        assert.ok(graph.includes("command: 'openFile'"), 'expected openFile message');
+        assert.ok(graph.includes("command: 'saveFile'"), 'expected saveFile message');
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Depth control for the selected-item graph
 // ---------------------------------------------------------------------------
 suite('Selected item depth control', () => {

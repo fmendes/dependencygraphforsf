@@ -74,6 +74,16 @@
 					"minimum": 0,
 					"description": "Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to 2 to hide leaf nodes and reduce clutter in large orgs. 0 means show everything."
 				},
+				"dependencygraphforsf.renderIn": {
+					"type": "string",
+					"enum": ["webview", "browser"],
+					"default": "webview",
+					"enumDescriptions": [
+						"Show the graph in a VS Code editor tab (recommended)",
+						"Write dependencyGraph.html to the project root and open it in the default browser"
+					],
+					"description": "Where to display the generated dependency graph."
+				},
 				"dependencygraphforsf.selectedItemDepth": {
 					"type": "integer",
 					"default": 2,

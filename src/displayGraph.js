@@ -75,18 +75,93 @@ function displayGraph( graphDefinition, graphType, fullPath
     let graphHTML = buildGraphHTML( theHeader
                         , `${graphDefinition}${independentItemElement}${styleSheetList}` );
 
-    openBrowserWithGraph( fullPath, graphHTML );
+    presentGraph( fullPath, graphHTML, 'dependencyGraph.html', `${graphType} Dependency Graph` );
+}
+
+function presentGraph( fullPath, graphHTML, fileName, title ) {
+    // shows the graph in a webview panel or the browser, per the renderIn setting;
+    // tests always take the file-writing path so output can be asserted
+    if( process.env.DEPENDENCYGRAPH_TEST ) {
+        openBrowserWithGraph( fullPath, graphHTML, fileName );
+        return;
+    }
+    const renderIn = vscode.workspace.getConfiguration( 'dependencygraphforsf' ).get( 'renderIn', 'webview' );
+    if( renderIn === 'browser' ) {
+        openBrowserWithGraph( fullPath, graphHTML, fileName );
+        return;
+    }
+    showGraphInWebview( graphHTML, title );
+}
+
+function showGraphInWebview( graphHTML, title ) {
+    // opens the graph in a VS Code webview panel; handles node clicks and export saves
+    const panel = vscode.window.createWebviewPanel(
+        'dependencygraphforsf.graph', title, vscode.ViewColumn.One, { enableScripts: true }
+    );
+    panel.webview.html = graphHTML;
+
+    panel.webview.onDidReceiveMessage( async ( message ) => {
+        try {
+            if( message.command === 'openFile' ) {
+                // href format:  vscode://file/<path>[:line]
+                let filePath = decodeURI( message.href.replace( 'vscode://file', '' ) );
+                let line = 0;
+                const lineSuffix = filePath.match( /:(\d+)$/ );
+                if( lineSuffix ) {
+                    line = parseInt( lineSuffix[ 1 ], 10 ) - 1;
+                    filePath = filePath.replace( /:\d+$/, '' );
+                }
+                const doc = await vscode.workspace.openTextDocument( filePath );
+                const editor = await vscode.window.showTextDocument( doc, vscode.ViewColumn.Beside );
+                if( line > 0 ) {
+                    const position = new vscode.Position( line, 0 );
+                    editor.revealRange( new vscode.Range( position, position ) );
+                    editor.selection = new vscode.Selection( position, position );
+                }
+            }
+            if( message.command === 'saveFile' ) {
+                const uri = await vscode.window.showSaveDialog( {
+                    defaultUri: vscode.Uri.file( message.fileName )
+                } );
+                if( ! uri ) {
+                    return;
+                }
+                const buffer = message.isDataUrl
+                    ? Buffer.from( message.content.split( ',' )[ 1 ], 'base64' )
+                    : Buffer.from( message.content, 'utf8' );
+                fs.writeFileSync( uri.fsPath, buffer );
+                vscode.window.showInformationMessage( `Dependency Graph: Saved ${uri.fsPath}` );
+            }
+        } catch( err ) {
+            vscode.window.showErrorMessage( `Dependency Graph: ${err.message}` );
+        }
+    } );
 }
 
 function buildGraphHTML( theHeader, graphBody ) {
-    // builds HTML page with embedded Mermaid graph and script to adjust its height
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
+    // builds HTML page with embedded Mermaid graph, search box, export buttons
+    // and a script to adjust the graph height; works in a browser and in a
+    // VS Code webview (detected via acquireVsCodeApi)
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<style>
+#toolbar { position: sticky; top: 0; background: white; padding: 8px 0; border-bottom: 1px solid #ccc; z-index: 10; }
+#searchBox { padding: 4px 8px; width: 260px; }
+#toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
+</style></head>
 <body><h2>${theHeader}</h2>
+<div id="toolbar">
+<input id="searchBox" type="text" placeholder="Filter nodes..." oninput="filterNodes(this.value)">
+<button onclick="exportSVG()">Export SVG</button>
+<button onclick="exportPNG()">Export PNG</button>
+</div>
 <div id="theGraph" class="mermaid">\n
 graph LR\n${graphBody}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:\'loose\'});
+<script>
+var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
+
+mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:'loose'});
 (function() {
   var el = document.querySelector("#theGraph");
   var observer = new MutationObserver(function() {
@@ -94,7 +169,68 @@ graph LR\n${graphBody}
     if (svg) { svg.setAttribute("height","100%"); observer.disconnect(); }
   });
   observer.observe(el, {childList:true, subtree:true});
-})();</script>
+})();
+
+// inside a webview, node links cannot navigate; forward them to the extension
+document.addEventListener('click', function(e) {
+  if (!vscodeApi) { return; }
+  var link = e.target.closest('a');
+  if (!link) { return; }
+  var href = link.getAttribute('href') || link.getAttribute('xlink:href');
+  if (href && href.indexOf('vscode://file') === 0) {
+    e.preventDefault();
+    vscodeApi.postMessage({ command: 'openFile', href: href });
+  }
+});
+
+function filterNodes(term) {
+  term = term.toLowerCase();
+  document.querySelectorAll('#theGraph svg g.node').forEach(function(node) {
+    var match = !term || node.textContent.toLowerCase().indexOf(term) >= 0;
+    node.style.opacity = match ? '1' : '0.15';
+  });
+}
+
+function deliverFile(fileName, content, isDataUrl) {
+  if (vscodeApi) {
+    vscodeApi.postMessage({ command: 'saveFile', fileName: fileName, content: content, isDataUrl: !!isDataUrl });
+    return;
+  }
+  var anchor = document.createElement('a');
+  anchor.href = isDataUrl ? content
+              : URL.createObjectURL(new Blob([content], { type: 'image/svg+xml' }));
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+function exportSVG() {
+  var svg = document.querySelector('#theGraph svg');
+  if (!svg) { return; }
+  deliverFile('dependencyGraph.svg', new XMLSerializer().serializeToString(svg), false);
+}
+
+function exportPNG() {
+  var svg = document.querySelector('#theGraph svg');
+  if (!svg) { return; }
+  var rect = svg.getBoundingClientRect();
+  var data = new XMLSerializer().serializeToString(svg);
+  var img = new Image();
+  img.onload = function() {
+    var canvas = document.createElement('canvas');
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    deliverFile('dependencyGraph.png', canvas.toDataURL('image/png'), true);
+  };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
+}
+</script>
 </body></html>`;
 }
 
@@ -128,5 +264,6 @@ module.exports = {
     getStyleSheet,
     displayGraph,
     buildGraphHTML,
+    presentGraph,
     openBrowserWithGraph
 }
