@@ -16,4 +16,4 @@ All notable changes to the "dependencygraphforsf" extension will be documented i
 - 1.0.9 release:  Fixed handling of folder names with spaces
 - 1.0.10 release:  Fixed handling of folder names in Windows appearing as ///c%3a
 - 1.1.0 release:  Internal dependency graph for a single Apex class with sObject read/write detection, clickable nodes that open files in VS Code, multi-package folder discovery via sfdx-project.json, settings (dependencyLimit, minConnections, sourceFolders), packaged flows excluded, LWC context-menu fix, deterministic graph rendering, automated test suite
-- 1.1.1 release:  Graph opens in a VS Code webview panel (renderIn setting), search/filter box, SVG/PNG export, depth control for the selected-item graph (selectedItemDepth setting), flows calling invocable Apex detected and labeled, triggers linked to the sObject they fire on
+- 1.1.1 release:  Graph opens in a VS Code webview panel (renderIn setting), search/filter box, day/night mode toggle, zoom controls, SVG/PNG export, depth control for the selected-item graph (selectedItemDepth setting), flows calling invocable Apex detected and labeled, triggers linked to the sObject they fire on

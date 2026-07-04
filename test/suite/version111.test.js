@@ -102,6 +102,17 @@ suite('Graph page toolbar', () => {
         assert.ok(graph.includes('function exportPNG'), 'expected the PNG export script');
     });
 
+    test('generated HTML includes day/night toggle and zoom controls', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('function toggleDarkMode'), 'expected the dark mode toggle script');
+        assert.ok(graph.includes('body.dark #theGraph .edgePath path'), 'expected dark-mode edge styling');
+        assert.ok(graph.includes('prefers-color-scheme: dark'), 'expected OS preference detection');
+        assert.ok(graph.includes('function zoomBy'), 'expected the zoom script');
+        assert.ok(graph.includes('zoomBy(0.2)') && graph.includes('zoomBy(-0.2)'), 'expected zoom in/out buttons');
+        assert.ok(graph.includes('zoomReset()'), 'expected the zoom reset button');
+    });
+
     test('generated HTML carries the webview bridge for clicks and saves', () => {
         DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
         const graph = readAndDeleteGraph();

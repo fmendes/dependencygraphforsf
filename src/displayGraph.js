@@ -144,13 +144,28 @@ function buildGraphHTML( theHeader, graphBody ) {
     // VS Code webview (detected via acquireVsCodeApi)
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <style>
+body { transition: background-color 0.2s; }
 #toolbar { position: sticky; top: 0; background: white; padding: 8px 0; border-bottom: 1px solid #ccc; z-index: 10; }
 #searchBox { padding: 4px 8px; width: 260px; }
 #toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
+#theGraph { zoom: 1; }
+
+/* night mode: dark page, light edges and labels */
+body.dark { background-color: #1e1e1e; color: #ddd; }
+body.dark #toolbar { background: #1e1e1e; border-bottom-color: #444; }
+body.dark #toolbar input, body.dark #toolbar button { background: #333; color: #ddd; border: 1px solid #555; }
+body.dark #theGraph .edgePath path, body.dark #theGraph path.flowchart-link { stroke: #bbb !important; }
+body.dark #theGraph marker path { fill: #bbb !important; stroke: #bbb !important; }
+body.dark #theGraph .edgeLabel, body.dark #theGraph .edgeLabel span { background-color: #333 !important; color: #eee !important; }
+body.dark #theGraph .edgeLabel rect { fill: #333 !important; }
 </style></head>
 <body><h2>${theHeader}</h2>
 <div id="toolbar">
 <input id="searchBox" type="text" placeholder="Filter nodes..." oninput="filterNodes(this.value)">
+<button onclick="zoomBy(0.2)" title="Zoom in">+</button>
+<button onclick="zoomBy(-0.2)" title="Zoom out">&minus;</button>
+<button onclick="zoomReset()" title="Reset zoom">100%</button>
+<button id="darkToggle" onclick="toggleDarkMode()" title="Toggle day/night mode">&#127769;</button>
 <button onclick="exportSVG()">Export SVG</button>
 <button onclick="exportPNG()">Export PNG</button>
 </div>
@@ -190,6 +205,32 @@ function filterNodes(term) {
     node.style.opacity = match ? '1' : '0.15';
   });
 }
+
+var zoomLevel = 1;
+function zoomBy(step) {
+  zoomLevel = Math.max(0.2, Math.round((zoomLevel + step) * 10) / 10);
+  document.getElementById('theGraph').style.zoom = zoomLevel;
+}
+function zoomReset() {
+  zoomLevel = 1;
+  document.getElementById('theGraph').style.zoom = 1;
+}
+
+function applyDarkMode(enabled) {
+  document.body.classList.toggle('dark', enabled);
+  document.getElementById('darkToggle').innerHTML = enabled ? '&#9728;' : '&#127769;';
+  try { localStorage.setItem('depGraphDarkMode', enabled ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+}
+function toggleDarkMode() {
+  applyDarkMode(!document.body.classList.contains('dark'));
+}
+(function() {
+  var stored = null;
+  try { stored = localStorage.getItem('depGraphDarkMode'); } catch (e) { /* storage unavailable */ }
+  var dark = stored !== null ? stored === '1'
+           : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (dark) { applyDarkMode(true); }
+})();
 
 function deliverFile(fileName, content, isDataUrl) {
   if (vscodeApi) {

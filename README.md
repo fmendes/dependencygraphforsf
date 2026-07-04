@@ -13,6 +13,8 @@ Activate with Ctrl + Shift + P or right click a folder or file then select one o
 - **Graph opens inside VS Code** — the graph renders in an editor tab (webview). Set `renderIn` to `browser` for the previous behavior of opening an HTML file in your browser.
 - **Clickable nodes** — clicking a node opens the corresponding source file (beside the graph when in the webview).
 - **Search/filter box** — type in the toolbar to fade out non-matching nodes.
+- **Day/night mode** — toolbar toggle switches to a dark background with light edges and labels; follows your OS preference by default and remembers your choice.
+- **Zoom controls** — +, − and 100% buttons in the toolbar.
 - **Export SVG/PNG** — toolbar buttons save the graph as an image for docs and wikis.
 - **Depth control** — the selected-item graph includes items up to `selectedItemDepth` hops away (default 2); set it to 1 for direct dependencies only.
 - **Flows calling Apex** — invocable action calls and Apex-defined types in flows are detected and labeled on the edge.
