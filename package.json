@@ -53,6 +53,10 @@
 			{
 				"command": "dependencygraphforsf.graphItem",
 				"title": "Dependency graph for the selected item"
+			},
+			{
+				"command": "dependencygraphforsf.graphClassInternals",
+				"title": "Internal dependency graph for this class"
 			}
 		],
 		"configuration": {
@@ -83,12 +87,20 @@
 				{
 					"command": "dependencygraphforsf.graphItem",
 					"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphClassInternals",
+					"when": " resourceExtname == .cls "
 				}
 			],
 			"explorer/context": [
 				{
 					"command": "dependencygraphforsf.graphItem",
 					"when": " resourceExtname =~ /.trigger|.cls|.cls-meta.xml|.js|.cmp|.html|.page|.flow-meta.xml/ "
+				},
+				{
+					"command": "dependencygraphforsf.graphClassInternals",
+					"when": " resourceExtname == .cls "
 				},
 				{
 					"command": "dependencygraphforsf.graphTriggers",

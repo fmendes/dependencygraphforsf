@@ -87,6 +87,24 @@ suite('sfdx-project.json multi-folder discovery', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Clickable nodes
+// ---------------------------------------------------------------------------
+suite('Clickable nodes', () => {
+    test('graph nodes include click directives opening the source file', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph(SUITE_FOLDER);
+        assert.ok(
+            /click TopLevelClass-CLASS "vscode:\/\/file[^"]+TopLevelClass\.cls"/.test(graph),
+            'expected click directive for TopLevelClass pointing at its file'
+        );
+        assert.ok(
+            /click RightClass-CLASS "vscode:\/\/file[^"]+RightClass\.cls"/.test(graph),
+            'referenced items should also be clickable'
+        );
+    });
+});
+
+// ---------------------------------------------------------------------------
 // minConnections setting
 // ---------------------------------------------------------------------------
 suite('minConnections filtering', () => {

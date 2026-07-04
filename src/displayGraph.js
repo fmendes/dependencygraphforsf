@@ -72,11 +72,18 @@ function displayGraph( graphDefinition, graphType, fullPath
                   + ` or raise "Minimum Connections" in Settings &rarr; Extensions &rarr; DependencyGraphForSF.`
                 : '' );
 
-    // build page with everything and script to adjust height of graph
-    let graphHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
+    let graphHTML = buildGraphHTML( theHeader
+                        , `${graphDefinition}${independentItemElement}${styleSheetList}` );
+
+    openBrowserWithGraph( fullPath, graphHTML );
+}
+
+function buildGraphHTML( theHeader, graphBody ) {
+    // builds HTML page with embedded Mermaid graph and script to adjust its height
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head>
 <body><h2>${theHeader}</h2>
 <div id="theGraph" class="mermaid">\n
-graph LR\n${graphDefinition}${independentItemElement}${styleSheetList}
+graph LR\n${graphBody}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:\'loose\'});
@@ -89,14 +96,12 @@ graph LR\n${graphDefinition}${independentItemElement}${styleSheetList}
   observer.observe(el, {childList:true, subtree:true});
 })();</script>
 </body></html>`;
-
-    openBrowserWithGraph( fullPath, graphHTML );
 }
 
-function openBrowserWithGraph( fullPath, graphHTML ) {
+function openBrowserWithGraph( fullPath, graphHTML, fileName = 'dependencyGraph.html' ) {
     // saves HTML file containing graph and opens it in browser
 
-    let depGraphPath = `${fullPath}${folderDelimiter}dependencyGraph.html`;
+    let depGraphPath = `${fullPath}${folderDelimiter}${fileName}`;
     try {
         if( fs.existsSync( depGraphPath ) ) {
             fs.unlinkSync( depGraphPath );
@@ -120,7 +125,8 @@ function openBrowserWithGraph( fullPath, graphHTML ) {
 }
 
 module.exports = {
-    getStyleSheet, 
+    getStyleSheet,
     displayGraph,
+    buildGraphHTML,
     openBrowserWithGraph
 }

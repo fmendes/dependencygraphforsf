@@ -17,6 +17,7 @@
 const vscode = require('vscode');
 
 const DependencyGraph = require('./src/dependencyGraph.js');
+const SingleClassGraph = require('./src/singleClassDependencyGraph.js');
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -103,6 +104,14 @@ function activate(context) {
 		let fileName = uriPathArray[ 0 ].split( '/' ).pop();
 		DependencyGraph.createGraph( folderPath, fileName, [ graphType ] );
 	}
+	let graphClassInternalsHandler = ( uri ) => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		SingleClassGraph.createSingleClassGraph( uri.fsPath, folderPath.replace( /%20/g, ' ' ) );
+	}
 
 	// The commandId parameter must match the command field in package.json
 	let classHandler = vscode.commands.registerCommand('dependencygraphforsf.graphClasses', graphClassHandler );
@@ -119,8 +128,10 @@ function activate(context) {
 
 	let itemHandler = vscode.commands.registerCommand('dependencygraphforsf.graphItem', graphItemHandler );
 
+	let classInternalsHandler = vscode.commands.registerCommand('dependencygraphforsf.graphClassInternals', graphClassInternalsHandler );
+
 	context.subscriptions.push( classHandler, triggerHandler, flowHandler
-					, lwcHandler, auraHandler, vfHandler, itemHandler );
+					, lwcHandler, auraHandler, vfHandler, itemHandler, classInternalsHandler );
 }
 
 function getFolderPath() {

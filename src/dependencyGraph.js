@@ -539,6 +539,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let independentItemList = [];
     let listByType = new Map();
     let dependencyCount = 0;
+    let clickBindings = new Map();
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
 
     sortedClassReferenceArray.forEach( anItem => {
@@ -570,6 +571,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 return;
             }
         }
+
+        // make node clickable:  opens the item's file in VS Code
+        clickBindings.set( anItem.uniqueName, anItem.filePath );
 
         // display items that do not have dependencies as a single shape
         if( ! anItem.referencesSet || anItem.referencesSet.size === 0 ) {
@@ -608,6 +612,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // encode flow from a dependant item to a referenced item
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName}) --> ${aReference.uniqueName}${methodList}\n`;
             graphDefinition += dependencyFlow;
+
+            // referenced items also get a click binding
+            clickBindings.set( aReference.uniqueName, aReference.filePath );
         } );
 
         // prepare Mermaid output for items that don't have dependencies but are referenced by other items
@@ -616,6 +623,17 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             graphDefinition += dependencyFlow;
         }
     } );
+
+    // append click directives so nodes open their source file in VS Code
+    if( graphDefinition !== '' ) {
+        clickBindings.forEach( ( filePath, uniqueName ) => {
+            let urlPath = filePath.replace( /\\/g, '/' );
+            if( ! urlPath.startsWith( '/' ) ) {
+                urlPath = '/' + urlPath;
+            }
+            graphDefinition += `click ${uniqueName} "vscode://file${encodeURI( urlPath )}" "Open file"\n`;
+        } );
+    }
 
     let graphTypeDescription = getGraphTypeDescription( graphType );
 
