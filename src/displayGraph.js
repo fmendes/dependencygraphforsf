@@ -82,14 +82,17 @@ function displayGraph( graphDefinition, graphType, fullPath
                 ? `<br>WARNING: ${cycleCount} items form circular dependencies (red dashed border).`
                 : '' );
 
-    // Mermaid refuses to render definitions larger than maxTextSize, so it
-    // must scale with the edge limit or raising the limit silently fails
+    // Mermaid refuses to render definitions larger than maxTextSize, and
+    // flowcharts with more than maxEdges edges (default 500!), so both must
+    // scale with the edge limit or raising the limit silently fails
     const maxTextSize = Math.max( 190000, dependencyLimit * 300 );
+    const maxEdges = Math.max( 1000, dependencyLimit * 2 );
 
     let graphHTML = buildGraphHTML( theHeader
                         , `${graphDefinition}${styleSheetList}`
                         , independentItemElement
-                        , maxTextSize );
+                        , maxTextSize
+                        , maxEdges );
 
     presentGraph( fullPath, graphHTML, 'dependencyGraph.html', `${graphType} Dependency Graph` );
 }
@@ -154,7 +157,7 @@ function showGraphInWebview( graphHTML, title ) {
     } );
 }
 
-function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 190000 ) {
+function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 190000, maxEdges = 2000 ) {
     // builds HTML page with embedded Mermaid graph, search box, export buttons
     // and a script to adjust the graph height; works in a browser and in a
     // VS Code webview (detected via acquireVsCodeApi)
@@ -197,11 +200,11 @@ body.dark #theGraph .edgeLabel rect { fill: #333 !important; }
 graph LR\n${graphBody}
 </div>
 ${footerHTML}
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
 
-mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},securityLevel:'loose'});
+mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'});
 
 // inside a webview, vscode:// links must not navigate: VS Code's own link
 // handler would ALSO open them (prompt + duplicate tab). Strip the hrefs

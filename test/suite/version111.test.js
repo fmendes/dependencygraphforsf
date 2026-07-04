@@ -192,6 +192,25 @@ suite('maxTextSize scaling', () => {
             'expected maxTextSize scaled from the dependency limit'
         );
     });
+
+    test('flowchart maxEdges scales with the limit (Mermaid default is only 500)', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        // default dependencyLimit is 900 → max(1000, 900*2) = 1800
+        assert.ok(
+            graph.includes('flowchart:{maxEdges:1800}'),
+            'expected maxEdges scaled from the dependency limit'
+        );
+    });
+
+    test('Mermaid CDN version is pinned to a major version', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('mermaid@11/dist/mermaid.min.js'),
+            'expected a pinned Mermaid major version so new limits/renderer changes cannot break graphs silently'
+        );
+    });
 });
 
 // ---------------------------------------------------------------------------
