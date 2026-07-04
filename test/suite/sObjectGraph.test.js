@@ -35,19 +35,77 @@ suite('sObject usage collection', () => {
         assert.ok(!byName.has('StandaloneClass'), 'StandaloneClass touches no sObjects');
         assert.ok(!byName.has('LeafA'), 'LeafA touches no sObjects');
     });
+
+    test('record-triggered flows report their object, reads and writes', () => {
+        const flow = byName.get('RecordFlow');
+        assert.ok(flow, 'RecordFlow should be in the usage list');
+        assert.strictEqual(flow.triggeredBy, 'Account');
+        assert.deepStrictEqual(flow.reads, ['Contact']);
+        assert.deepStrictEqual(flow.writes, [{ operation: 'update', sObject: 'Account' }]);
+    });
+
+    test('flows without record operations are not listed', () => {
+        assert.ok(!byName.has('SubFlow'), 'SubFlow has no record operations');
+        assert.ok(!byName.has('MainFlow'), 'MainFlow only calls a subflow');
+    });
+
+    test('workflows write to the sObject they are named after', () => {
+        const workflow = byName.get('Account');
+        assert.ok(workflow, 'Account workflow should be in the usage list');
+        assert.strictEqual(workflow.item.itemType.type, 'WORKFLOW');
+        assert.deepStrictEqual(workflow.writes, [{ operation: 'field update', sObject: 'Account' }]);
+    });
+});
+
+suite('Flow sObject usage parsing', () => {
+    const SObjectGraphModule = require('../../src/sObjectGraph.js');
+
+    test('parses reads, writes and the triggering object from flow XML', () => {
+        const flowText = '<start><object>Case</object></start>'
+            + '<recordLookups><object>Contact</object></recordLookups>'
+            + '<recordCreates><object>Task</object></recordCreates>'
+            + '<recordDeletes><object>Case</object></recordDeletes>';
+        const usage = SObjectGraphModule.findFlowSObjectUsage(flowText);
+        assert.strictEqual(usage.triggeredBy, 'Case');
+        assert.deepStrictEqual(usage.reads, ['Contact']);
+        assert.deepStrictEqual(usage.writes.map(w => `${w.operation}:${w.sObject}`).sort(),
+            ['create:Task', 'delete:Case']);
+    });
+
+    test('deduplicates repeated blocks on the same object', () => {
+        const flowText = '<recordUpdates><object>Lead</object></recordUpdates>'
+            + '<recordUpdates><object>Lead</object></recordUpdates>';
+        const usage = SObjectGraphModule.findFlowSObjectUsage(flowText);
+        assert.deepStrictEqual(usage.writes, [{ operation: 'update', sObject: 'Lead' }]);
+    });
 });
 
 suite('sObject graph definition', () => {
     const usageList = SObjectGraph.collectSObjectUsage([SOURCE_FOLDER]);
 
-    test('unfiltered graph contains read, write and trigger edges', () => {
+    test('writers point into the sObject; readers branch out of it', () => {
         const { graphDefinition } = SObjectGraph.buildSObjectGraphDefinition(usageList, null);
+        // reads flow OUT of the sObject so readers render on the right
         assert.ok(graphDefinition.includes(
-            'ProcessorClass-CLASS(ProcessorClass CLASS) -->|read| sobj_Account[(Account)]'));
+            'sobj_Account[(Account)] -->|read| ProcessorClass-CLASS(ProcessorClass CLASS)'));
+        // writes flow INTO the sObject so writers render on the left
         assert.ok(graphDefinition.includes(
             'ProcessorClass-CLASS(ProcessorClass CLASS) -->|write: insert| sobj_Contact[(Contact)]'));
         assert.ok(graphDefinition.includes(
             'AccountUpdater-TRIGGER(AccountUpdater TRIGGER) -->|on| sobj_Account[(Account)]'));
+    });
+
+    test('flow and workflow edges appear with their own directions', () => {
+        const { graphDefinition } = SObjectGraph.buildSObjectGraphDefinition(usageList, null);
+        assert.ok(graphDefinition.includes(
+            'sobj_Account[(Account)] -->|triggers| RecordFlow-FLOW(RecordFlow FLOW)'),
+            'record-triggered flow should branch out of its sObject');
+        assert.ok(graphDefinition.includes(
+            'RecordFlow-FLOW(RecordFlow FLOW) -->|write: update| sobj_Account[(Account)]'),
+            'flow record update should point into the sObject');
+        assert.ok(graphDefinition.includes(
+            'Account-WORKFLOW(Account WORKFLOW) -->|write: field update| sobj_Account[(Account)]'),
+            'workflow field update should point into the sObject');
     });
 
     test('filtering by Account keeps Account edges and drops the rest', () => {

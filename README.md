@@ -19,7 +19,7 @@ Activate with Ctrl + Shift + P or right click a folder or file then select one o
 - **Depth control** — the selected-item graph includes items up to `selectedItemDepth` hops away (default 2); set it to 1 for direct dependencies only.
 - **Flows calling Apex** — invocable action calls and Apex-defined types in flows are detected and labeled on the edge.
 - **Triggers show their sObject** — trigger graphs include an `on` edge to the sObject the trigger fires on (light green cylinder).
-- **sObject usage graph** — the "Dependency graph for sObjects" command shows which classes and triggers read (SOQL) or write (DML) each sObject; enter an sObject name to see everything that touches it (e.g. Account).
+- **sObject usage graph** — the "Dependency graph for sObjects" command shows which classes, triggers, flows and workflows touch each sObject. Writers (DML, record updates, field updates) point into the sObject on the left; readers (SOQL, record lookups) and record-triggered flows branch out on the right. Right-click the `objects` folder for all sObjects, or a specific object subfolder (e.g. `objects/Account`) to scope the graph to that sObject; from the command palette you'll be prompted for a name.
 - **Circular dependency highlighting** — items that form reference cycles get a red dashed border, and the header reports the count.
 - **Orphans report** — lists disconnected items (no references in or out — dead-code candidates) and unreferenced items, with clickable links.
 - **Packaged flows are excluded** — flows from managed packages (names with a `namespace__` prefix) are filtered out so they don't clutter the big picture.

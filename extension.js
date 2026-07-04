@@ -105,21 +105,33 @@ function activate(context) {
 		let fileName = uriPathArray[ 0 ].split( '/' ).pop();
 		DependencyGraph.createGraph( folderPath, fileName, [ graphType ] );
 	}
-	let graphSObjectsHandler = async () => {
+	let graphSObjectsHandler = async ( uri ) => {
 		let folderPath = getFolderPath();
 		if( ! folderPath ) {
 			return;
 		}
 
-		let sObjectFilter = await vscode.window.showInputBox( {
-			prompt: 'sObject to filter by (leave empty to show all sObjects)',
-			placeHolder: 'e.g. Account'
-		} );
-		if( sObjectFilter === undefined ) {
-			return; // user cancelled
+		let sObjectFilter = null;
+
+		// right-clicking an object subfolder (e.g. objects/Account) pre-fills the filter
+		if( uri && uri.path && uri.path.includes( '/objects' ) ) {
+			let segments = uri.path.split( '/' );
+			let objectsIndex = segments.indexOf( 'objects' );
+			if( objectsIndex >= 0 && segments.length > objectsIndex + 1 ) {
+				sObjectFilter = segments[ objectsIndex + 1 ];
+			}
+		} else {
+			sObjectFilter = await vscode.window.showInputBox( {
+				prompt: 'sObject to filter by (leave empty to show all sObjects)',
+				placeHolder: 'e.g. Account'
+			} );
+			if( sObjectFilter === undefined ) {
+				return; // user cancelled
+			}
+			sObjectFilter = sObjectFilter || null;
 		}
 
-		SObjectGraph.createSObjectGraph( folderPath.replace( /%20/g, ' ' ), sObjectFilter || null );
+		SObjectGraph.createSObjectGraph( folderPath.replace( /%20/g, ' ' ), sObjectFilter );
 	}
 	let orphansReportHandler = () => {
 		let folderPath = getFolderPath();

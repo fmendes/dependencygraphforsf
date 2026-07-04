@@ -177,6 +177,22 @@
 				{
 					"command": "dependencygraphforsf.graphVisualforcePages",
 					"when": " explorerResourceIsFolder && resourceFilename == pages "
+				},
+				{
+					"command": "dependencygraphforsf.graphSObjects",
+					"when": " explorerResourceIsFolder && resourceFilename == objects "
+				},
+				{
+					"command": "dependencygraphforsf.graphSObjects",
+					"when": " resourceDirname =~ /objects/ "
+				},
+				{
+					"command": "dependencygraphforsf.orphansReport",
+					"when": " explorerResourceIsFolder && resourceFilename == force-app "
+				},
+				{
+					"command": "dependencygraphforsf.orphansReport",
+					"when": " explorerResourceIsFolder && resourceFilename == default "
 				}
 			]
 		}
