@@ -10,7 +10,13 @@ This extension will open a dependency graph for the selected type of element: Ap
 
 Activate with Ctrl + Shift + P or right click a folder or file then select one of the "Dependency graph..." options.
 
-- **Clickable nodes** — clicking a node in the graph opens the corresponding source file in VS Code (the browser may ask for permission to open VS Code on the first click).
+- **Graph opens inside VS Code** — the graph renders in an editor tab (webview). Set `renderIn` to `browser` for the previous behavior of opening an HTML file in your browser.
+- **Clickable nodes** — clicking a node opens the corresponding source file (beside the graph when in the webview).
+- **Search/filter box** — type in the toolbar to fade out non-matching nodes.
+- **Export SVG/PNG** — toolbar buttons save the graph as an image for docs and wikis.
+- **Depth control** — the selected-item graph includes items up to `selectedItemDepth` hops away (default 2); set it to 1 for direct dependencies only.
+- **Flows calling Apex** — invocable action calls and Apex-defined types in flows are detected and labeled on the edge.
+- **Triggers show their sObject** — trigger graphs include an `on` edge to the sObject the trigger fires on (light green cylinder).
 - **Packaged flows are excluded** — flows from managed packages (names with a `namespace__` prefix) are filtered out so they don't clutter the big picture.
 - **Multi-package projects** — all `packageDirectories` from `sfdx-project.json` are scanned and merged into a single graph, so cross-package dependencies show up.
 
@@ -44,6 +50,8 @@ Open Settings → Extensions → DependencyGraphForSF (or search for `dependency
 
 | Setting | Default | Description |
 |---|---|---|
+| `dependencygraphforsf.renderIn` | `webview` | Where to display the graph: `webview` opens an editor tab inside VS Code; `browser` writes `dependencyGraph.html` to the project root and opens the default browser. |
+| `dependencygraphforsf.selectedItemDepth` | `2` | How many hops away from the selected item to include. `1` shows only direct dependencies/dependents. |
 | `dependencygraphforsf.dependencyLimit` | `700` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
 | `dependencygraphforsf.minConnections` | `0` | Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to `2` to hide leaf nodes and reduce clutter in large orgs. `0` shows everything. |
 | `dependencygraphforsf.sourceFolders` | `[]` | Explicit list of source folders to scan, relative to the project root (e.g. `["my-package/main/default"]`). Overrides the automatic `sfdx-project.json` detection. Leave empty for auto-detect. |
@@ -55,6 +63,14 @@ When a graph hits the dependency limit, the page header suggests ways to reduce 
 None currently. (The earlier issue where the same graph rendered differently on consecutive runs was fixed by deterministic sorting and per-run cache clearing.)
 
 ## Release Notes
+
+### 1.1.1
+
+- Graph opens in a VS Code webview panel (configurable via `renderIn`)
+- Search/filter box and SVG/PNG export buttons in the graph toolbar
+- Depth control for the selected-item graph (`selectedItemDepth`)
+- Flows calling invocable Apex are detected and labeled
+- Triggers show an edge to the sObject they fire on
 
 ### 1.1.0
 
