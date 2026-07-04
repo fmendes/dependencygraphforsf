@@ -57,7 +57,7 @@ Open Settings → Extensions → DependencyGraphForSF (or search for `dependency
 |---|---|---|
 | `dependencygraphforsf.renderIn` | `webview` | Where to display the graph: `webview` opens an editor tab inside VS Code; `browser` writes `dependencyGraph.html` to the project root and opens the default browser. |
 | `dependencygraphforsf.selectedItemDepth` | `2` | How many hops away from the selected item to include. `1` shows only direct dependencies/dependents. |
-| `dependencygraphforsf.dependencyLimit` | `700` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
+| `dependencygraphforsf.dependencyLimit` | `900` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
 | `dependencygraphforsf.minConnections` | `0` | Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to `2` to hide leaf nodes and reduce clutter in large orgs. `0` shows everything. |
 | `dependencygraphforsf.sourceFolders` | `[]` | Explicit list of source folders to scan, relative to the project root (e.g. `["my-package/main/default"]`). Overrides the automatic `sfdx-project.json` detection. Leave empty for auto-detect. |
 

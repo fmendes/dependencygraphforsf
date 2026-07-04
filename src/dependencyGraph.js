@@ -86,6 +86,14 @@ var getSourceCodeFolders = ( projectFolder ) => {
 var getUniqueName = ( aName, aType ) => {
     return `${aName}-${aType}`;
 }
+var getGraphTypeFromFlags = ( lowerCaseArgs ) => {
+    return  lowerCaseArgs.includes( '--trigger' ) ? TRIGGERType :
+            lowerCaseArgs.includes( '--lwc' ) ? LWCType :
+            lowerCaseArgs.includes( '--aura' ) ? AURAType :
+            lowerCaseArgs.includes( '--flow' ) ? FLOWType :
+            lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' ) ? PAGEType :
+            CLASSType;
+}
 var getGraphTypeDescription = ( graphType ) => {
     return ( graphType === CLASSType ? 'Classes' : 
             graphType === TRIGGERType ? 'Triggers' : 
@@ -404,7 +412,7 @@ class ItemData {
 //
 //
 
-const DEPENDENCY_LIMIT = 700;
+const DEPENDENCY_LIMIT = 900;
 const HIGH_REF_THRESHOLD = 6;
 
 function findCycleMembers( crossReferenceMap ) {
@@ -555,7 +563,7 @@ function scanReferences( sourceCodeFolders, graphType, scanAllTypes ) {
     return crossReferenceMap;
 }
 
-function createGraph( projectFolder, selectedItem, myArgs ) {
+function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = null ) {
 
     const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
     const dependencyLimit = config.get( 'dependencyLimit', DEPENDENCY_LIMIT );
@@ -580,12 +588,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     // determine which parameter flags were passed
     let lowerCaseArgs = ( myArgs? myArgs.map( param => param.toLowerCase() ): [] );
-    let graphType = lowerCaseArgs.includes( '--trigger' ) ? TRIGGERType :
-                    lowerCaseArgs.includes( '--lwc' ) ? LWCType :
-                    lowerCaseArgs.includes( '--aura' ) ? AURAType :
-                    lowerCaseArgs.includes( '--flow' ) ? FLOWType :
-                    lowerCaseArgs.includes( '--visualforce' ) || lowerCaseArgs.includes( '--vf' ) ? PAGEType :
-                    CLASSType;
+    let graphType = getGraphTypeFromFlags( lowerCaseArgs );
 
     // get unique name to identify selected item
     let selectedItemUniqueName;
@@ -593,8 +596,17 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         selectedItemUniqueName = getUniqueName( selectedItem, graphType );
     }
 
+    // multi-selection in the explorer:  graph only these items and the edges between them
+    let multiSelectedSet = null;
+    if( multiSelectedItems && multiSelectedItems.length > 0 ) {
+        multiSelectedSet = new Set( multiSelectedItems.map( anItem =>
+            getUniqueName( anItem.fileName
+                , getGraphTypeFromFlags( [ anItem.graphType.toLowerCase() ] ) ) ) );
+    }
+
     // this is the basis of the dependency graph
-    let crossReferenceMap = scanReferences( sourceCodeFolders, graphType, !!selectedItemUniqueName );
+    let crossReferenceMap = scanReferences( sourceCodeFolders, graphType
+                            , !!selectedItemUniqueName || !!multiSelectedSet );
 
     // sort by descending order the classes by their referenced count + count of references 
     // to other classes and hopefully make the graph more legible
@@ -658,13 +670,18 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     }
 
     sortedClassReferenceArray.forEach( anItem => {
+        // with a multi-selection, keep only the selected items
+        if( multiSelectedSet && ! multiSelectedSet.has( anItem.uniqueName ) ) {
+            return;
+        }
+
         // if an item was selected, keep only items within selectedItemDepth hops of it
         if( includedSet && ! includedSet.has( anItem ) ) {
             return;
         }
 
-        // if an item was selected, include references in the graph regardless of type
-        if( ! theSelectedItem ) {
+        // if an item was selected (single or multi), include references regardless of type
+        if( ! theSelectedItem && ! multiSelectedSet ) {
             // BUT if no item was selected, skip elements that were not specified in the command line
 
             // check if the current item is the type that was specified in the command line
@@ -712,6 +729,11 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
+            // keep only edges between selected items
+            if( multiSelectedSet && ! multiSelectedSet.has( aReference.uniqueName ) ) {
+                return;
+            }
+
             // keep only edges between items that survived the depth filter
             if( includedSet && ! includedSet.has( aReference ) ) {
                 return;
@@ -766,7 +788,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         } );
     }
 
-    let graphTypeDescription = getGraphTypeDescription( graphType );
+    let graphTypeDescription = ( multiSelectedSet
+                ? `Selected Items (${multiSelectedSet.size})`
+                : getGraphTypeDescription( graphType ) );
 
     let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap
                                                     , listByType, theSelectedItem );

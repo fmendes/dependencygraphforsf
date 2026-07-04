@@ -82,9 +82,14 @@ function displayGraph( graphDefinition, graphType, fullPath
                 ? `<br>WARNING: ${cycleCount} items form circular dependencies (red dashed border).`
                 : '' );
 
+    // Mermaid refuses to render definitions larger than maxTextSize, so it
+    // must scale with the edge limit or raising the limit silently fails
+    const maxTextSize = Math.max( 190000, dependencyLimit * 300 );
+
     let graphHTML = buildGraphHTML( theHeader
                         , `${graphDefinition}${styleSheetList}`
-                        , independentItemElement );
+                        , independentItemElement
+                        , maxTextSize );
 
     presentGraph( fullPath, graphHTML, 'dependencyGraph.html', `${graphType} Dependency Graph` );
 }
@@ -149,7 +154,7 @@ function showGraphInWebview( graphHTML, title ) {
     } );
 }
 
-function buildGraphHTML( theHeader, graphBody, footerHTML = '' ) {
+function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 190000 ) {
     // builds HTML page with embedded Mermaid graph, search box, export buttons
     // and a script to adjust the graph height; works in a browser and in a
     // VS Code webview (detected via acquireVsCodeApi)
@@ -196,7 +201,7 @@ ${footerHTML}
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
 
-mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:'loose'});
+mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},securityLevel:'loose'});
 
 // inside a webview, vscode:// links must not navigate: VS Code's own link
 // handler would ALSO open them (prompt + duplicate tab). Strip the hrefs

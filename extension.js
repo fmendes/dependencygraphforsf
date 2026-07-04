@@ -76,12 +76,8 @@ function activate(context) {
 
 		DependencyGraph.createGraph( folderPath, null, [ '--vf' ] );
 	}
-	let graphItemHandler = ( uri ) => {
-		let folderPath = getFolderPath();
-		if( ! folderPath ) {
-			return;
-		}
-
+	let getItemFromUri = ( uri ) => {
+		// derives the item name and graph type flag from a file uri
 		let uriPathArray = uri.path.split( '.' );
 		let extension = uriPathArray.pop();
 		let graphType = extension === 'cls' ? '--classes' :
@@ -99,11 +95,32 @@ function activate(context) {
 			graphType = '--lwc';
 		}
 		if( ! graphType ) {
-			return;
+			return null;
 		}
 
 		let fileName = uriPathArray[ 0 ].split( '/' ).pop();
-		DependencyGraph.createGraph( folderPath, fileName, [ graphType ] );
+		return { fileName, graphType };
+	}
+	let graphItemHandler = ( uri, selectedUris ) => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		// multi-selection in the explorer:  graph only the selected items
+		if( selectedUris && selectedUris.length > 1 ) {
+			let items = selectedUris.map( getItemFromUri ).filter( Boolean );
+			if( items.length > 1 ) {
+				DependencyGraph.createGraph( folderPath, null, [ items[ 0 ].graphType ], items );
+				return;
+			}
+		}
+
+		let item = getItemFromUri( uri );
+		if( ! item ) {
+			return;
+		}
+		DependencyGraph.createGraph( folderPath, item.fileName, [ item.graphType ] );
 	}
 	let graphSObjectsHandler = async ( uri ) => {
 		let folderPath = getFolderPath();

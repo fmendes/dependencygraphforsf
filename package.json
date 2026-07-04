@@ -75,7 +75,7 @@
 			"properties": {
 				"dependencygraphforsf.dependencyLimit": {
 					"type": "integer",
-					"default": 700,
+					"default": 900,
 					"minimum": 100,
 					"description": "Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering)."
 				},
@@ -132,67 +132,35 @@
 				},
 				{
 					"command": "dependencygraphforsf.graphTriggers",
-					"when": " resourceDirname =~ /triggers/ "
+					"when": "resourcePath =~ /[\\\\/]triggers([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphLWCs",
-					"when": " resourceDirname =~ /lwc/ "
+					"when": "resourcePath =~ /[\\\\/]lwc([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphClasses",
-					"when": " resourceDirname =~ /classes/ "
+					"when": "resourcePath =~ /[\\\\/]classes([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphAuraComponents",
-					"when": " resourceDirname =~ /aura/ "
+					"when": "resourcePath =~ /[\\\\/]aura([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphFlows",
-					"when": " resourceDirname =~ /flows/ "
+					"when": "resourcePath =~ /[\\\\/]flows([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphVisualforcePages",
-					"when": " resourceDirname =~ /pages/ "
-				},
-				{
-					"command": "dependencygraphforsf.graphTriggers",
-					"when": " explorerResourceIsFolder && resourceFilename == triggers "
-				},
-				{
-					"command": "dependencygraphforsf.graphLWCs",
-					"when": " explorerResourceIsFolder && resourceFilename == lwc "
-				},
-				{
-					"command": "dependencygraphforsf.graphClasses",
-					"when": " explorerResourceIsFolder && resourceFilename == classes "
-				},
-				{
-					"command": "dependencygraphforsf.graphAuraComponents",
-					"when": " explorerResourceIsFolder && resourceFilename == aura "
-				},
-				{
-					"command": "dependencygraphforsf.graphFlows",
-					"when": " explorerResourceIsFolder && resourceFilename == flows "
-				},
-				{
-					"command": "dependencygraphforsf.graphVisualforcePages",
-					"when": " explorerResourceIsFolder && resourceFilename == pages "
+					"when": "resourcePath =~ /[\\\\/](pages|components)([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphSObjects",
-					"when": " explorerResourceIsFolder && resourceFilename == objects "
-				},
-				{
-					"command": "dependencygraphforsf.graphSObjects",
-					"when": " resourceDirname =~ /objects/ "
+					"when": "resourcePath =~ /[\\\\/]objects([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.orphansReport",
-					"when": " explorerResourceIsFolder && resourceFilename == force-app "
-				},
-				{
-					"command": "dependencygraphforsf.orphansReport",
-					"when": " explorerResourceIsFolder && resourceFilename == default "
+					"when": "explorerResourceIsFolder && resourceFilename =~ /^(force-app|default)$/"
 				}
 			]
 		}

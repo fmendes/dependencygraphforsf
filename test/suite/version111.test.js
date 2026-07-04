@@ -180,6 +180,60 @@ suite('Graph page toolbar', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Mermaid maxTextSize scales with the dependency limit
+// ---------------------------------------------------------------------------
+suite('maxTextSize scaling', () => {
+    test('maxTextSize follows dependencyLimit so raising the limit actually renders', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        // default dependencyLimit is 900 → max(190000, 900*300) = 270000
+        assert.ok(
+            graph.includes('maxTextSize:270000'),
+            'expected maxTextSize scaled from the dependency limit'
+        );
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Multi-selection graph
+// ---------------------------------------------------------------------------
+suite('Multi-selection graph', () => {
+    const multiItems = [
+        { fileName: 'TopLevelClass', graphType: '--classes' },
+        { fileName: 'RightClass', graphType: '--classes' }
+    ];
+
+    test('graphs only the selected items and the edges between them', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes'], multiItems);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('TopLevelClass-CLASS(TopLevelClass CLASS) --> RightClass-CLASS'),
+            'expected the edge between the two selected items'
+        );
+        assert.ok(!graph.includes('LeftClass-CLASS'), 'unselected items must be excluded');
+        assert.ok(!graph.includes('HubClass-CLASS'), 'unselected items must be excluded');
+    });
+
+    test('mixed-type selections are allowed', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes'], [
+            { fileName: 'TopLevelClass', graphType: '--classes' },
+            { fileName: 'myComponent', graphType: '--lwc' }
+        ]);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('myComponent-LWC(myComponent LWC) --> TopLevelClass-CLASS'),
+            'expected the cross-type edge between selected items'
+        );
+    });
+
+    test('the header names the selection', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes'], multiItems);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('Selected Items (2)'), 'expected the selection header');
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Independent items box layout
 // ---------------------------------------------------------------------------
 suite('Independent items box', () => {
