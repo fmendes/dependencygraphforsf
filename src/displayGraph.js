@@ -180,26 +180,40 @@ graph LR\n${graphBody}
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
 
 mermaid.initialize({startOnLoad:true,maxTextSize:190000,securityLevel:'loose'});
+
+// inside a webview, vscode:// links must not navigate: VS Code's own link
+// handler would ALSO open them (prompt + duplicate tab). Strip the hrefs
+// and forward clicks to the extension instead, so only one path opens the file.
+function rewireVscodeLinks(root) {
+  if (!vscodeApi) { return; }
+  root.querySelectorAll('a').forEach(function(link) {
+    var href = link.getAttribute('href') || link.getAttribute('xlink:href');
+    if (!href || href.indexOf('vscode://file') !== 0 || link.dataset.rewired) { return; }
+    link.dataset.rewired = '1';
+    link.removeAttribute('href');
+    link.removeAttribute('xlink:href');
+    link.removeAttributeNS('http://www.w3.org/1999/xlink', 'href');
+    link.style.cursor = 'pointer';
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      vscodeApi.postMessage({ command: 'openFile', href: href });
+    });
+  });
+}
+
 (function() {
   var el = document.querySelector("#theGraph");
   var observer = new MutationObserver(function() {
     var svg = el.querySelector("svg");
-    if (svg) { svg.setAttribute("height","100%"); observer.disconnect(); }
+    if (svg) {
+      svg.setAttribute("height","100%");
+      rewireVscodeLinks(el);
+      observer.disconnect();
+    }
   });
   observer.observe(el, {childList:true, subtree:true});
 })();
-
-// inside a webview, node links cannot navigate; forward them to the extension
-document.addEventListener('click', function(e) {
-  if (!vscodeApi) { return; }
-  var link = e.target.closest('a');
-  if (!link) { return; }
-  var href = link.getAttribute('href') || link.getAttribute('xlink:href');
-  if (href && href.indexOf('vscode://file') === 0) {
-    e.preventDefault();
-    vscodeApi.postMessage({ command: 'openFile', href: href });
-  }
-});
 
 function filterNodes(term) {
   term = term.toLowerCase();
@@ -294,16 +308,23 @@ li { margin: 2px 0; }
 ${bodyHTML}
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
-document.addEventListener('click', function(e) {
-  if (!vscodeApi) { return; }
-  var link = e.target.closest('a');
-  if (!link) { return; }
-  var href = link.getAttribute('href');
-  if (href && href.indexOf('vscode://file') === 0) {
-    e.preventDefault();
-    vscodeApi.postMessage({ command: 'openFile', href: href });
-  }
-});
+
+// inside a webview, strip vscode:// hrefs and forward clicks to the extension,
+// otherwise VS Code's own link handler would also open the file (prompt + duplicate)
+if (vscodeApi) {
+  document.querySelectorAll('a').forEach(function(link) {
+    var href = link.getAttribute('href');
+    if (!href || href.indexOf('vscode://file') !== 0) { return; }
+    link.removeAttribute('href');
+    link.style.cursor = 'pointer';
+    link.style.textDecoration = 'underline';
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      vscodeApi.postMessage({ command: 'openFile', href: href });
+    });
+  });
+}
 </script>
 </body></html>`;
 }

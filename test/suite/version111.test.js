@@ -152,6 +152,18 @@ suite('Graph page toolbar', () => {
         assert.ok(graph.includes("command: 'openFile'"), 'expected openFile message');
         assert.ok(graph.includes("command: 'saveFile'"), 'expected saveFile message');
     });
+
+    test('webview links are stripped of hrefs to prevent duplicate opens', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('function rewireVscodeLinks'), 'expected the link rewiring function');
+        assert.ok(graph.includes("removeAttribute('href')"), 'expected href removal in webview mode');
+        assert.ok(graph.includes('e.stopPropagation()'), 'expected propagation stop on rewired clicks');
+        assert.ok(
+            !graph.includes("document.addEventListener('click'"),
+            'the old document-level click listener must be gone'
+        );
+    });
 });
 
 // ---------------------------------------------------------------------------
