@@ -417,6 +417,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     const path = require( 'path' );
     projectFolder = path.resolve( projectFolder.replace( /%20/g, ' ' ).replace( /\/\/\/(\w)\%3A/g, '$1:' ) );
 
+    // clear cached item lists so repeated runs pick up file changes and new folders
+    itemTypeMap.forEach( itemType => { itemType.itemsList = null; } );
+
     let sourceCodeFolders = getSourceCodeFolders( projectFolder );
     if( ! sourceCodeFolders || sourceCodeFolders.length === 0 ) {
         vscode.window.showErrorMessage(
@@ -630,6 +633,7 @@ module.exports = {
     createGraph
     , ItemType
     , JSItemType
+    , FlowItemType
     , CLASSType, TRIGGERType, AURAType, LWCType, FLOWType, PAGEType
     , DEPENDENCY_LIMIT, HIGH_REF_THRESHOLD
 }

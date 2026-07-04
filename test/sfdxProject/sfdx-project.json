@@ -1,0 +1,8 @@
+{
+    "packageDirectories": [
+        { "path": "pkg-one", "default": true },
+        { "path": "pkg-two" }
+    ],
+    "namespace": "",
+    "sourceApiVersion": "58.0"
+}
