@@ -90,6 +90,38 @@ suite('Trigger sObject mapping', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Circular dependency detection
+// ---------------------------------------------------------------------------
+suite('Circular dependency detection', () => {
+    test('classes referencing each other get the cycle highlight', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('classDef cycleNode'), 'expected the cycle classDef');
+        const cycleLine = graph.split('\n').find(l => l.includes('cycleNode') && l.startsWith('class '));
+        assert.ok(cycleLine, 'expected a class assignment line for cycleNode');
+        assert.ok(cycleLine.includes('CycleAClass-CLASS'), 'CycleAClass should be marked');
+        assert.ok(cycleLine.includes('CycleBClass-CLASS'), 'CycleBClass should be marked');
+        assert.ok(!cycleLine.includes('TopLevelClass-CLASS'), 'acyclic classes must not be marked');
+    });
+
+    test('the header warns about circular dependencies', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('2 items form circular dependencies'),
+            'expected cycle warning in the header'
+        );
+    });
+
+    test('cycle edges appear in both directions', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('CycleAClass-CLASS(CycleAClass CLASS) --> CycleBClass-CLASS'));
+        assert.ok(graph.includes('CycleBClass-CLASS(CycleBClass CLASS) --> CycleAClass-CLASS'));
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Graph page toolbar: search/filter and export
 // ---------------------------------------------------------------------------
 suite('Graph page toolbar', () => {

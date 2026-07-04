@@ -45,7 +45,7 @@ function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelect
 
 function displayGraph( graphDefinition, graphType, fullPath
             , styleSheetList, selectedItemDisplayName, independentItemList
-            , dependencyCount, dependencyLimit ) {
+            , dependencyCount, dependencyLimit, cycleCount = 0 ) {
     // creates HTML containing graph and displays it
 
     if( graphDefinition === '' ) {
@@ -70,6 +70,9 @@ function displayGraph( graphDefinition, graphType, fullPath
                 ? `<br>WARNING: Graph is limited to ${dependencyCount} edges.`
                   + ` To reduce clutter: right-click a specific item to scope the graph,`
                   + ` or raise "Minimum Connections" in Settings &rarr; Extensions &rarr; DependencyGraphForSF.`
+                : '' )
+            + ( cycleCount > 0
+                ? `<br>WARNING: ${cycleCount} items form circular dependencies (red dashed border).`
                 : '' );
 
     let graphHTML = buildGraphHTML( theHeader

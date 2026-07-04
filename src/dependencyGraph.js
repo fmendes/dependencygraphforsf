@@ -407,6 +407,65 @@ class ItemData {
 const DEPENDENCY_LIMIT = 700;
 const HIGH_REF_THRESHOLD = 6;
 
+function findCycleMembers( crossReferenceMap ) {
+    // iterative Tarjan strongly-connected components over the referencesSet
+    // edges; members of any SCC larger than one item are part of a cycle
+    let index = 0;
+    const nodeState = new Map();
+    const sccStack = [];
+    const cycleMembers = new Set();
+
+    crossReferenceMap.forEach( ( rootItem ) => {
+        if( nodeState.has( rootItem.uniqueName ) ) {
+            return;
+        }
+
+        nodeState.set( rootItem.uniqueName, { index, lowlink: index, onStack: true } );
+        sccStack.push( rootItem );
+        index++;
+        const workStack = [ { item: rootItem, neighbors: [...rootItem.referencesSet], next: 0 } ];
+
+        while( workStack.length > 0 ) {
+            const frame = workStack[ workStack.length - 1 ];
+            const state = nodeState.get( frame.item.uniqueName );
+
+            if( frame.next < frame.neighbors.length ) {
+                const neighbor = frame.neighbors[ frame.next++ ];
+                const neighborState = nodeState.get( neighbor.uniqueName );
+                if( ! neighborState ) {
+                    nodeState.set( neighbor.uniqueName, { index, lowlink: index, onStack: true } );
+                    sccStack.push( neighbor );
+                    index++;
+                    workStack.push( { item: neighbor, neighbors: [...neighbor.referencesSet], next: 0 } );
+                } else if( neighborState.onStack ) {
+                    state.lowlink = Math.min( state.lowlink, neighborState.index );
+                }
+            } else {
+                workStack.pop();
+                if( workStack.length > 0 ) {
+                    const parentState = nodeState.get( workStack[ workStack.length - 1 ].item.uniqueName );
+                    parentState.lowlink = Math.min( parentState.lowlink, state.lowlink );
+                }
+                if( state.lowlink === state.index ) {
+                    // pop this strongly-connected component off the stack
+                    const component = [];
+                    let popped;
+                    do {
+                        popped = sccStack.pop();
+                        nodeState.get( popped.uniqueName ).onStack = false;
+                        component.push( popped );
+                    } while( popped !== frame.item );
+                    if( component.length > 1 ) {
+                        component.forEach( member => cycleMembers.add( member.uniqueName ) );
+                    }
+                }
+            }
+        }
+    } );
+
+    return cycleMembers;
+}
+
 function createGraph( projectFolder, selectedItem, myArgs ) {
 
     const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
@@ -678,6 +737,14 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         }
     } );
 
+    // highlight members of circular dependencies with a red dashed border
+    const cycleMembers = findCycleMembers( crossReferenceMap );
+    const renderedCycleMembers = [...cycleMembers].filter( name => clickBindings.has( name ) );
+    if( renderedCycleMembers.length > 0 && graphDefinition !== '' ) {
+        graphDefinition += `classDef cycleNode stroke:#ff0000,stroke-width:4px,stroke-dasharray: 5 5;\n`
+            + `class ${renderedCycleMembers.join( ',' )} cycleNode\n`;
+    }
+
     // style sObject nodes as light green cylinders
     if( sObjectNodes.size > 0 && graphDefinition !== '' ) {
         graphDefinition += `classDef sObjectNode fill:lightgreen,stroke-width:1px;\n`
@@ -704,7 +771,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
-                            , dependencyCount, dependencyLimit );
+                            , dependencyCount, dependencyLimit, renderedCycleMembers.length );
 }
 
 module.exports = {
