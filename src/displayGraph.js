@@ -60,18 +60,14 @@ function displayGraph( graphDefinition, graphType, fullPath
     }
 
     // build HTML page with dependency graph
-    // list independent items in rows of several per line with a smaller font,
-    // so the box spreads horizontally instead of becoming a tall column
+    // independent items render as an HTML section below the diagram so they
+    // span the full page width and wrap naturally, instead of a Mermaid node
+    // whose width is dictated by its content
     let independentItemElement = '';
     if( independentItemList.length > 0 ) {
-        const ITEMS_PER_ROW = 5;
-        let rows = [];
-        for( let i = 0; i < independentItemList.length; i += ITEMS_PER_ROW ) {
-            rows.push( independentItemList.slice( i, i + ITEMS_PER_ROW ).join( ' &bull; ' ) );
-        }
-        independentItemElement = 'independentItems(ITEMS WITH NO DEPENDENCIES:<br>' + rows.join( '<br>' ) + ')\n'
-            + 'classDef independentsStyle font-size:10px;\n'
-            + 'class independentItems independentsStyle\n';
+        independentItemElement = `<div id="independentItems">`
+            + `<h3>ITEMS WITH NO DEPENDENCIES (${independentItemList.length})</h3>`
+            + `<p>${independentItemList.join( ' &bull; ' )}</p></div>`;
     }
 
     let theHeader = `${graphType} Dependency Graph for ${fullPath}`
@@ -87,7 +83,8 @@ function displayGraph( graphDefinition, graphType, fullPath
                 : '' );
 
     let graphHTML = buildGraphHTML( theHeader
-                        , `${graphDefinition}${independentItemElement}${styleSheetList}` );
+                        , `${graphDefinition}${styleSheetList}`
+                        , independentItemElement );
 
     presentGraph( fullPath, graphHTML, 'dependencyGraph.html', `${graphType} Dependency Graph` );
 }
@@ -152,7 +149,7 @@ function showGraphInWebview( graphHTML, title ) {
     } );
 }
 
-function buildGraphHTML( theHeader, graphBody ) {
+function buildGraphHTML( theHeader, graphBody, footerHTML = '' ) {
     // builds HTML page with embedded Mermaid graph, search box, export buttons
     // and a script to adjust the graph height; works in a browser and in a
     // VS Code webview (detected via acquireVsCodeApi)
@@ -163,6 +160,10 @@ body { transition: background-color 0.2s; }
 #searchBox { padding: 4px 8px; width: 260px; }
 #toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
 #theGraph { zoom: 1; }
+#independentItems { font-size: 11px; border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px; margin-top: 12px; }
+#independentItems h3 { margin: 0 0 6px 0; font-size: 12px; }
+#independentItems p { margin: 0; line-height: 1.6; }
+body.dark #independentItems { border-color: #555; }
 
 /* night mode: dark page, light edges and labels */
 body.dark { background-color: #1e1e1e !important; color: #ddd; }
@@ -187,6 +188,7 @@ body.dark #theGraph .edgeLabel rect { fill: #333 !important; }
 <div id="theGraph" class="mermaid">\n
 graph LR\n${graphBody}
 </div>
+${footerHTML}
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;

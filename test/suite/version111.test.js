@@ -82,8 +82,9 @@ suite('Trigger sObject mapping', () => {
     test('trigger with an sObject edge is not listed as independent', () => {
         DependencyGraph.createGraph(SUITE_FOLDER, null, ['--trigger']);
         const graph = readAndDeleteGraph();
+        const boxMatch = graph.match(/<div id="independentItems">[^]*?<\/div>/);
         assert.ok(
-            !/ITEMS WITH NO DEPENDENCIES:[^)]*AccountUpdater/.test(graph),
+            !boxMatch || !boxMatch[0].includes('AccountUpdater'),
             'AccountUpdater must not appear in the independent items list'
         );
     });
@@ -174,14 +175,18 @@ suite('Graph page toolbar', () => {
 // Independent items box layout
 // ---------------------------------------------------------------------------
 suite('Independent items box', () => {
-    test('items are laid out in rows with a smaller font', () => {
+    test('items render as a full-width HTML section below the diagram', () => {
         DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
         const graph = readAndDeleteGraph();
-        const boxLine = graph.split('\n').find(l => l.includes('ITEMS WITH NO DEPENDENCIES'));
-        assert.ok(boxLine, 'expected the independent items box');
-        assert.ok(boxLine.includes(' &bull; '), 'items should be joined horizontally with bullets');
-        assert.ok(graph.includes('classDef independentsStyle font-size:10px'), 'expected the smaller font style');
-        assert.ok(graph.includes('class independentItems independentsStyle'), 'expected the style applied to the box');
+        const boxMatch = graph.match(/<div id="independentItems">[^]*?<\/div>/);
+        assert.ok(boxMatch, 'expected the independent items section');
+        assert.ok(boxMatch[0].includes('ITEMS WITH NO DEPENDENCIES ('), 'expected the heading with a count');
+        assert.ok(boxMatch[0].includes(' &bull; '), 'items should be joined horizontally with bullets');
+        assert.ok(graph.includes('#independentItems { font-size: 11px'), 'expected the smaller font style');
+        // the section must live outside the Mermaid graph definition
+        const mermaidBlock = graph.match(/class="mermaid">[^]*?<\/div>/);
+        assert.ok(!mermaidBlock[0].includes('ITEMS WITH NO DEPENDENCIES'),
+            'independent items must not be a Mermaid node anymore');
     });
 });
 
