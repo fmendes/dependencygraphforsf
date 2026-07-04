@@ -25,30 +25,63 @@ if( process.platform === 'win32' ) {
     folderDelimiter = '\\';
 }
 
-var getSourceCodeFolder = ( projectFolder ) => {
+var resolveSourceFolder = ( base, packagePath ) => {
+    // given a package root path, return the source folder to scan:
+    // prefer <root>/main/default, fall back to <root> itself
+    const withDefault = `${base}${folderDelimiter}${packagePath}${folderDelimiter}main${folderDelimiter}default`;
+    if( fs.existsSync( withDefault ) ) {
+        return withDefault;
+    }
+    const withoutDefault = `${base}${folderDelimiter}${packagePath}`;
+    if( fs.existsSync( withoutDefault ) ) {
+        return withoutDefault;
+    }
+    return null;
+}
+
+var getSourceCodeFolders = ( projectFolder ) => {
     const path = require( 'path' );
 
-    // fix Windows path
+    // fix Windows paths (e.g. ///c%3A → c:)
     projectFolder = projectFolder.replace( /\/\/\/(\w)\%3A/g, '$1:' );
+    projectFolder = path.resolve( projectFolder );
 
-    projectFolder = path.resolve( projectFolder ); 
-
-    // fix windows paths
-    projectFolder = projectFolder.replace( '\\c%3A', '' );
-
-    if( ! projectFolder.includes( 'force-app' ) ) {
-        return `${projectFolder}${folderDelimiter}force-app${folderDelimiter}main${folderDelimiter}default`;
+    // walk up to project root (the folder that is NOT already inside force-app/main/default)
+    let projectRoot = projectFolder;
+    for( const seg of [ 'default', 'main', 'force-app' ] ) {
+        if( projectRoot.endsWith( folderDelimiter + seg ) || projectRoot.endsWith( '/' + seg ) ) {
+            projectRoot = path.dirname( projectRoot );
+        }
     }
 
-    if( ! projectFolder.includes( 'main' ) ) {
-        return `${projectFolder}${folderDelimiter}main${folderDelimiter}default`;
+    // 1. VS Code setting overrides everything
+    const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
+    const settingFolders = config.get( 'sourceFolders', [] );
+    if( settingFolders.length > 0 ) {
+        return settingFolders
+            .map( p => path.isAbsolute( p ) ? p : `${projectRoot}${folderDelimiter}${p}` )
+            .filter( p => fs.existsSync( p ) );
     }
 
-    if( ! projectFolder.includes( 'default' ) ) {
-        return `${projectFolder}${folderDelimiter}default`;
+    // 2. Auto-detect from sfdx-project.json
+    const sfdxProjectFile = `${projectRoot}${folderDelimiter}sfdx-project.json`;
+    if( fs.existsSync( sfdxProjectFile ) ) {
+        try {
+            const sfdxProject = JSON.parse( fs.readFileSync( sfdxProjectFile, 'utf8' ) );
+            const dirs = ( sfdxProject.packageDirectories || [] )
+                .map( d => resolveSourceFolder( projectRoot, d.path ) )
+                .filter( Boolean );
+            if( dirs.length > 0 ) {
+                return dirs;
+            }
+        } catch( e ) {
+            // malformed sfdx-project.json — fall through to default
+        }
     }
 
-    return null;
+    // 3. Default: force-app/main/default
+    const defaultFolder = `${projectRoot}${folderDelimiter}force-app${folderDelimiter}main${folderDelimiter}default`;
+    return fs.existsSync( defaultFolder ) ? [ defaultFolder ] : [];
 }
 var getUniqueName = ( aName, aType ) => {
     return `${aName}-${aType}`;
@@ -137,19 +170,26 @@ class ItemType {
         } );
         return foundReferences;
     }
-    fetchItemsFromFolder( projectFolder ) {
+    fetchItemsFromFolders( sourceFolders ) {
         // avoid relisting items
         if( this.itemsList ) {
             return this.itemsList;
         }
-        let itemListForType = this.getItemList( projectFolder );
-        if( itemListForType === null || itemListForType === undefined ) {
+
+        // collect items across all source folders and merge
+        let merged = [];
+        sourceFolders.forEach( folder => {
+            let items = this.getItemList( folder );
+            if( items ) {
+                merged = merged.concat( items );
+            }
+        } );
+
+        if( merged.length === 0 ) {
             return;
         }
 
-        // store list of files per each type
-        this.itemsList = itemListForType;
-
+        this.itemsList = merged;
         return this.itemsList;
     }
 }
@@ -245,7 +285,9 @@ class VFItemType extends ItemType {
 }
 class FlowItemType extends ItemType {
     validateFileName( fileName ) {
+        // exclude hidden files, packaged/managed flows (namespace__ prefix), keep all others
         return ! fileName.startsWith( '.' )
+            && ! fileName.includes( '__' )
             && fileName.endsWith( this.extension );
     }
 }
@@ -367,13 +409,23 @@ const HIGH_REF_THRESHOLD = 6;
 
 function createGraph( projectFolder, selectedItem, myArgs ) {
 
-    const dependencyLimit = DEPENDENCY_LIMIT;
+    const config = vscode.workspace.getConfiguration( 'dependencygraphforsf' );
+    const dependencyLimit = config.get( 'dependencyLimit', DEPENDENCY_LIMIT );
+    const minConnections = config.get( 'minConnections', 0 );
 
-    // set proper folder location according to first parameter
-    projectFolder = projectFolder.replace( /%20/g, ' ' );
-    let sourceCodeFolder = getSourceCodeFolder( projectFolder );
-    if( ! sourceCodeFolder ) {
-        vscode.window.showErrorMessage( `Error:  Folder ${projectFolder} doesn't have files. Specify a folder containing project files.` );
+    // resolve project root (handles spaces and Windows URL-encoded paths)
+    const path = require( 'path' );
+    projectFolder = path.resolve( projectFolder.replace( /%20/g, ' ' ).replace( /\/\/\/(\w)\%3A/g, '$1:' ) );
+
+    // clear cached item lists so repeated runs pick up file changes and new folders
+    itemTypeMap.forEach( itemType => { itemType.itemsList = null; } );
+
+    let sourceCodeFolders = getSourceCodeFolders( projectFolder );
+    if( ! sourceCodeFolders || sourceCodeFolders.length === 0 ) {
+        vscode.window.showErrorMessage(
+            `Dependency Graph: No source folders found under ${projectFolder}. `
+            + `Add an sfdx-project.json or set "sourceFolders" in extension settings.`
+        );
         return;
     }
 
@@ -398,7 +450,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     // collect file paths for each of the item types and collect references in each file
     itemTypeMap.forEach( ( itemType ) => {
         // create item data for each item type from the files
-        let itemListForType = itemType.fetchItemsFromFolder( sourceCodeFolder );
+        let itemListForType = itemType.fetchItemsFromFolders( sourceCodeFolders );
         if( !itemListForType ) {
             return;
         }
@@ -487,6 +539,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     let independentItemList = [];
     let listByType = new Map();
     let dependencyCount = 0;
+    let clickBindings = new Map();
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
 
     sortedClassReferenceArray.forEach( anItem => {
@@ -510,6 +563,17 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
                 return;
             }
         }
+
+        // skip weakly-connected items when a minimum connection threshold is configured
+        if( minConnections > 0 ) {
+            const totalConnections = anItem.referencesSet.size + anItem.referencedCount;
+            if( totalConnections < minConnections ) {
+                return;
+            }
+        }
+
+        // make node clickable:  opens the item's file in VS Code
+        clickBindings.set( anItem.uniqueName, anItem.filePath );
 
         // display items that do not have dependencies as a single shape
         if( ! anItem.referencesSet || anItem.referencesSet.size === 0 ) {
@@ -548,6 +612,9 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
             // encode flow from a dependant item to a referenced item
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName}) --> ${aReference.uniqueName}${methodList}\n`;
             graphDefinition += dependencyFlow;
+
+            // referenced items also get a click binding
+            clickBindings.set( aReference.uniqueName, aReference.filePath );
         } );
 
         // prepare Mermaid output for items that don't have dependencies but are referenced by other items
@@ -557,6 +624,17 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
         }
     } );
 
+    // append click directives so nodes open their source file in VS Code
+    if( graphDefinition !== '' ) {
+        clickBindings.forEach( ( filePath, uniqueName ) => {
+            let urlPath = filePath.replace( /\\/g, '/' );
+            if( ! urlPath.startsWith( '/' ) ) {
+                urlPath = '/' + urlPath;
+            }
+            graphDefinition += `click ${uniqueName} "vscode://file${encodeURI( urlPath )}" "Open file"\n`;
+        } );
+    }
+
     let graphTypeDescription = getGraphTypeDescription( graphType );
 
     let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap
@@ -564,8 +642,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
-    // replaced projectFolder with sourceCodeFolder to address Windows path issue
-    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, sourceCodeFolder
+    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
                             , dependencyCount, dependencyLimit );
 }
@@ -574,6 +651,7 @@ module.exports = {
     createGraph
     , ItemType
     , JSItemType
+    , FlowItemType
     , CLASSType, TRIGGERType, AURAType, LWCType, FLOWType, PAGEType
     , DEPENDENCY_LIMIT, HIGH_REF_THRESHOLD
 }

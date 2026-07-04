@@ -1,12 +1,18 @@
 # Dependency Graph for Salesforce
 
-This extension scans the Salesforce metadata and code stored in /force-app/main/default to extract class/method names and find dependencies between them then opens a dependency graph in an HTML page using Mermaid JS.
+This extension scans Salesforce metadata and code to extract class/method names and find dependencies between them, then opens a dependency graph in an HTML page using Mermaid JS.
+
+Source folders are discovered automatically: the extension reads `sfdx-project.json` and scans every package directory listed in it (mono-repos with multiple packages are supported), falling back to `/force-app/main/default`. You can also set the folders explicitly in the settings.
 
 ## Features
 
-This extension will open a dependency graph for the selected type of element.
+This extension will open a dependency graph for the selected type of element: Apex Classes, Apex Triggers, Flows, Lightning Web Components, Aura Components and Visualforce Pages/Components.
 
 Activate with Ctrl + Shift + P or right click a folder or file then select one of the "Dependency graph..." options.
+
+- **Clickable nodes** — clicking a node in the graph opens the corresponding source file in VS Code (the browser may ask for permission to open VS Code on the first click).
+- **Packaged flows are excluded** — flows from managed packages (names with a `namespace__` prefix) are filtered out so they don't clutter the big picture.
+- **Multi-package projects** — all `packageDirectories` from `sfdx-project.json` are scanned and merged into a single graph, so cross-package dependencies show up.
 
 Dependency graph for Aura components
 ![Dependency Graph for Aura components](images/AuraDependencyGraph.png)
@@ -20,19 +26,47 @@ Dependency graph for Lightning Web Components
 Dependency graph from the right click context menu
 ![Dependency graph from the right click context menu](images/contextMenu.png)
 
+### Internal dependency graph for a single class
+
+Right click a `.cls` file and select **"Internal dependency graph for this class"** to see the dependencies *inside* the class:
+
+- Method → method call edges show which methods call which.
+- Cylinder nodes represent sObjects: `read` arrows come from SOQL queries, `write: insert/update/delete/upsert` arrows come from DML statements (including `Database.insert()` style calls).
+- Clicking a method node opens the class file at that method's line in VS Code.
+
 ## Requirements
 
-The metadata must have been downloaded and available in the folder /force-app/main/default using "SFDX: Retrieve Source from Org".
+The metadata must have been downloaded and available locally, e.g. using "SFDX: Retrieve Source from Org". By default the extension looks at the package directories listed in `sfdx-project.json`, or `/force-app/main/default` when that file is absent.
 
 ## Extension Settings
 
-This extension has no settings to configure.
+Open Settings → Extensions → DependencyGraphForSF (or search for `dependencygraphforsf` in the settings):
+
+| Setting | Default | Description |
+|---|---|---|
+| `dependencygraphforsf.dependencyLimit` | `700` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
+| `dependencygraphforsf.minConnections` | `0` | Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to `2` to hide leaf nodes and reduce clutter in large orgs. `0` shows everything. |
+| `dependencygraphforsf.sourceFolders` | `[]` | Explicit list of source folders to scan, relative to the project root (e.g. `["my-package/main/default"]`). Overrides the automatic `sfdx-project.json` detection. Leave empty for auto-detect. |
+
+When a graph hits the dependency limit, the page header suggests ways to reduce clutter: scope the graph to a single item via right-click, or raise `minConnections`.
 
 ## Known Issues
 
-Sometimes when you open the same graph twice in a row, the graph is displayed slightly different. This seems to be related to the sort order.
+None currently. (The earlier issue where the same graph rendered differently on consecutive runs was fixed by deterministic sorting and per-run cache clearing.)
 
 ## Release Notes
+
+### 1.1.0
+
+- New: internal dependency graph for a single Apex class (method → method calls, sObject reads via SOQL, writes via DML)
+- New: clickable nodes open the source file in VS Code
+- New: multi-package folder discovery via sfdx-project.json, with `sourceFolders` setting override
+- New: `dependencyLimit` and `minConnections` settings to manage large graphs
+- Packaged (managed) flows are excluded from graphs
+- Fixed: LWC graph from js-meta.xml context menu did not generate
+- Fixed: graphs rendered differently on consecutive runs (deterministic sort + cache clearing)
+- Fixed: large graphs could appear clipped (render-complete detection instead of fixed delay)
+- Automated test suite (58 tests)
 
 ### 1.0.10
 

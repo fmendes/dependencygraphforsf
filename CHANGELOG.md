@@ -15,3 +15,4 @@ All notable changes to the "dependencygraphforsf" extension will be documented i
 - 1.0.8 release:  Better detection of non-method references, refactoring and new tests
 - 1.0.9 release:  Fixed handling of folder names with spaces
 - 1.0.10 release:  Fixed handling of folder names in Windows appearing as ///c%3a
+- 1.1.0 release:  Internal dependency graph for a single Apex class with sObject read/write detection, clickable nodes that open files in VS Code, multi-package folder discovery via sfdx-project.json, settings (dependencyLimit, minConnections, sourceFolders), packaged flows excluded, LWC context-menu fix, deterministic graph rendering, automated test suite
