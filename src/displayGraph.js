@@ -155,7 +155,10 @@ function buildGraphHTML( theHeader, graphBody, footerHTML = '' ) {
     // VS Code webview (detected via acquireVsCodeApi)
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <style>
-body { transition: background-color 0.2s; }
+/* explicit light defaults:  the VS Code webview injects the editor theme's
+   background, so without these the "light" mode would inherit a dark page */
+body { background-color: white !important; color: #111 !important; transition: background-color 0.2s; }
+#theGraph, #theGraph svg { background-color: white; }
 #toolbar { position: sticky; top: 0; background: white; padding: 8px 0; border-bottom: 1px solid #ccc; z-index: 10; }
 #searchBox { padding: 4px 8px; width: 260px; }
 #toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
@@ -166,7 +169,7 @@ body { transition: background-color 0.2s; }
 body.dark #independentItems { border-color: #555; }
 
 /* night mode: dark page, light edges and labels */
-body.dark { background-color: #1e1e1e !important; color: #ddd; }
+body.dark { background-color: #1e1e1e !important; color: #ddd !important; }
 body.dark #theGraph, body.dark #theGraph svg { background-color: #1e1e1e !important; }
 body.dark #toolbar { background: #1e1e1e; border-bottom-color: #444; }
 body.dark #toolbar input, body.dark #toolbar button { background: #333; color: #ddd; border: 1px solid #555; }
