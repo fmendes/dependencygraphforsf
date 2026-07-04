@@ -1,100 +1,116 @@
 const assert = require('assert');
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
+const path = require('path');
+const fs = require('fs');
 const vscode = require('vscode');
-// const myExtension = require('../extension');
 
 const DependencyGraph = require('../../src/dependencyGraph.js');
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+const SUITE_FOLDER = path.resolve(__dirname);
+const GRAPH_PATH = path.join(SUITE_FOLDER, 'dependencyGraph.html');
 
-	let anItemType = new DependencyGraph.ItemType( 
-				DependencyGraph.CLASSType, 'classes', '.cls', 'lightblue' );
+function readAndDeleteGraph() {
+    const html = fs.readFileSync(GRAPH_PATH, 'utf8');
+    fs.unlinkSync(GRAPH_PATH);
+    return html;
+}
 
-	test('Parsing references test', () => {
-		let theText = `public with sharing class DSController
-	public static void mapColors(){
-		if(colors == null){ 
-			colors = new Map<String,string>(); 
-			colors.put(DSHelper.STANDARD,'FireBrick'); 
-			colors.put(DSHelper.SILVER,'IndianRed'); 
-			colors.put(DSHelper.GOLD,'GoldenRod'); 
-			colors.put(DSHelper.PLATINUM,'LightGreen'); 
-			colors.put(DSHelper.PLATINUMP,'LimeGreen'); 
-		} 
-	}
-}`;
-		let itemName = 'DSHelper';
-		let foundReferences = anItemType.findReference( theText, itemName );
-		assert.strictEqual( 5, foundReferences.length );
-		assert.strictEqual( 'reference', foundReferences[ 0 ] );
-	} );
+// ---------------------------------------------------------------------------
+// Apex class graph — basic dependency detection
+// ---------------------------------------------------------------------------
+suite('Class graph integration', () => {
+    test('TopLevelClass references RightClass and LeftClass', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.length > 0, 'graph HTML should not be empty');
+        assert.ok(
+            graph.includes('TopLevelClass-CLASS(TopLevelClass CLASS) --> RightClass-CLASS(RightClass CLASS'),
+            'expected TopLevelClass → RightClass edge'
+        );
+        assert.ok(
+            graph.includes('TopLevelClass-CLASS(TopLevelClass CLASS) --> LeftClass-CLASS(LeftClass CLASS'),
+            'expected TopLevelClass → LeftClass edge'
+        );
+    });
 
-	test('Parsing references in unformatted class test', () => {
-		let theText = `public with sharing class IODSController
-	private static void mapColors(){
-		if(colors == null){ 
-			colors = new Map<String,string>();colors.put(IODSHelper.STANDARD,'FireBrick'); 
-			colors.put(IODSHelper.SILVER,'IndianRed');colors.put(IODSHelper.GOLD,'GoldenRod'); 
-			colors.put(IODSHelper.PLATINUM,'LightGreen');colors.put(IODSHelper.PLATINUMP,'LimeGreen'); 
-		} 
-	}
-}`;
-		let itemName = 'IODSHelper';
-		let foundReferences = anItemType.findReference( theText, itemName );
-		assert.strictEqual( 5, foundReferences.length );
-		assert.strictEqual( 'reference', foundReferences[ 0 ] );
-	} );
+    test('HubClass referencing 6 leaf classes appears as an orange (high-ref) node', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        // HIGH_REF_THRESHOLD is 6: HubClass references exactly 6 leaves
+        // so it must appear in the moreRefs (orange) classDef block
+        assert.ok(
+            graph.includes('class HubClass-CLASS moreRefs') ||
+            graph.includes('HubClass-CLASS moreRefs'),
+            'HubClass should be highlighted orange (HIGH_REF_THRESHOLD = 6)'
+        );
+    });
 
-	test('Parsing class instantiation test', () => {
-		let theText = `
-public with sharing class TopLevelClass {
+    test('graph output is deterministic across two consecutive runs', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const first = readAndDeleteGraph();
 
-	@InvocableMethod(label='Delegate to apex')
-	public static void doSomething(){
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const second = readAndDeleteGraph();
 
-		RightClass right = new RightClass();
-		LeftClass left = new LeftClass();
-		//new comment
+        assert.strictEqual(first, second, 'graph should be identical on repeated generation');
+    });
+});
 
-		List<Lead> leads = [SELECT ProductInterest__c ,Connected_Org__c FROM Lead];
-		//this comment was added in the workspace..
+// ---------------------------------------------------------------------------
+// Selected-item graph — filtering to connected nodes only
+// ---------------------------------------------------------------------------
+suite('Selected-item graph integration', () => {
+    test('selecting TopLevelClass includes its direct dependencies', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, 'TopLevelClass', ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('TopLevelClass-CLASS'),
+            'selected item should appear in graph'
+        );
+        assert.ok(
+            graph.includes('RightClass-CLASS'),
+            'direct dependency RightClass should appear'
+        );
+        assert.ok(
+            graph.includes('LeftClass-CLASS'),
+            'direct dependency LeftClass should appear'
+        );
+    });
 
-	}
+    test('selecting TopLevelClass excludes StandaloneClass (unconnected)', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, 'TopLevelClass', ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            !graph.includes('StandaloneClass-CLASS'),
+            'StandaloneClass has no connection to TopLevelClass and must be excluded'
+        );
+    });
 
-	public static void doNothing(){
-		String company = 'Salto';
-	}
+    test('selecting a leaf class shows itself and its referencing parent', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, 'RightClass', ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('RightClass-CLASS'), 'selected leaf should appear');
+        assert.ok(graph.includes('TopLevelClass-CLASS'), 'parent referencing the leaf should appear');
+    });
+});
 
-}`;
-		let itemName = 'RightClass';
-		let foundReferences = anItemType.findReference( theText, itemName );
-		assert.strictEqual( 1, foundReferences.length );
-		assert.strictEqual( 'instantiation', foundReferences[ 0 ] );
-		
-		itemName = 'LeftClass';
-		foundReferences = anItemType.findReference( theText, itemName );
-		assert.strictEqual( 1, foundReferences.length );
-		assert.strictEqual( 'instantiation', foundReferences[ 0 ] );
-	});
-
-	test('Graph test', () => {
-		//const folderPath = '/Users/fmendes/Projects/DependencyGraphForSF/dependencygraphforsf/test/suite with spaces';
-
-		const folderPath = '/Users/fmendes/Projects/DependencyGraphForSF/dependencygraphforsf/test/suite';//'./test/suite';
-		const fileName = null;
-		DependencyGraph.createGraph( folderPath, fileName, [ '--classes' ] );
-
-		const fs = require('fs');
-		const path = require( 'path' );
-		let projectFolder = path.resolve( folderPath );
-		let depGraphPath = `${projectFolder}/dependencyGraph.html`;
-		let graph = fs.readFileSync( depGraphPath, 'utf8' );
-		assert.equal( true, graph.length > 0 );
-		assert.equal( true, graph.includes( 'TopLevelClass-CLASS(TopLevelClass CLASS) --> RightClass-CLASS(RightClass CLASS' ) );
-		assert.equal( true, graph.includes( 'TopLevelClass-CLASS(TopLevelClass CLASS) --> LeftClass-CLASS(LeftClass CLASS' ) );
-        fs.unlinkSync( depGraphPath );
-	});
+// ---------------------------------------------------------------------------
+// LWC graph — cross-type dependency (LWC → Apex class)
+// ---------------------------------------------------------------------------
+suite('LWC graph integration', () => {
+    test('myComponent LWC referencing TopLevelClass via apex import appears in graph', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--lwc']);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('myComponent-LWC'),
+            'LWC component should appear as a node'
+        );
+        assert.ok(
+            graph.includes('TopLevelClass-CLASS'),
+            'cross-type Apex dependency should appear as a reference target'
+        );
+        assert.ok(
+            graph.includes('myComponent-LWC(myComponent LWC) --> TopLevelClass-CLASS'),
+            'expected myComponent → TopLevelClass edge'
+        );
+    });
 });

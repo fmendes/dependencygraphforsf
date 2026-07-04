@@ -568,5 +568,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 module.exports = {
     createGraph
     , ItemType
+    , JSItemType
     , CLASSType, TRIGGERType, AURAType, LWCType, FLOWType, PAGEType
+    , DEPENDENCY_LIMIT, HIGH_REF_THRESHOLD
 }
