@@ -18,6 +18,7 @@ const vscode = require('vscode');
 
 const DependencyGraph = require('./src/dependencyGraph.js');
 const SingleClassGraph = require('./src/singleClassDependencyGraph.js');
+const SObjectGraph = require('./src/sObjectGraph.js');
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -104,6 +105,22 @@ function activate(context) {
 		let fileName = uriPathArray[ 0 ].split( '/' ).pop();
 		DependencyGraph.createGraph( folderPath, fileName, [ graphType ] );
 	}
+	let graphSObjectsHandler = async () => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		let sObjectFilter = await vscode.window.showInputBox( {
+			prompt: 'sObject to filter by (leave empty to show all sObjects)',
+			placeHolder: 'e.g. Account'
+		} );
+		if( sObjectFilter === undefined ) {
+			return; // user cancelled
+		}
+
+		SObjectGraph.createSObjectGraph( folderPath.replace( /%20/g, ' ' ), sObjectFilter || null );
+	}
 	let graphClassInternalsHandler = ( uri ) => {
 		let folderPath = getFolderPath();
 		if( ! folderPath ) {
@@ -130,8 +147,11 @@ function activate(context) {
 
 	let classInternalsHandler = vscode.commands.registerCommand('dependencygraphforsf.graphClassInternals', graphClassInternalsHandler );
 
+	let sObjectsHandler = vscode.commands.registerCommand('dependencygraphforsf.graphSObjects', graphSObjectsHandler );
+
 	context.subscriptions.push( classHandler, triggerHandler, flowHandler
-					, lwcHandler, auraHandler, vfHandler, itemHandler, classInternalsHandler );
+					, lwcHandler, auraHandler, vfHandler, itemHandler
+					, classInternalsHandler, sObjectsHandler );
 }
 
 function getFolderPath() {

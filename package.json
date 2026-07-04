@@ -21,7 +21,9 @@
 		"onCommand:dependencygraphforsf.graphLWCs",
 		"onCommand:dependencygraphforsf.graphAuraComponents",
 		"onCommand:dependencygraphforsf.graphVisualforcePages",
-		"onCommand:dependencygraphforsf.graphItem"
+		"onCommand:dependencygraphforsf.graphItem",
+		"onCommand:dependencygraphforsf.graphClassInternals",
+		"onCommand:dependencygraphforsf.graphSObjects"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -57,6 +59,10 @@
 			{
 				"command": "dependencygraphforsf.graphClassInternals",
 				"title": "Internal dependency graph for this class"
+			},
+			{
+				"command": "dependencygraphforsf.graphSObjects",
+				"title": "Dependency graph for sObjects (reads/writes)"
 			}
 		],
 		"configuration": {

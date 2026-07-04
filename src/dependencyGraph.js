@@ -709,6 +709,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
 module.exports = {
     createGraph
+    , getSourceCodeFolders
     , ItemType
     , JSItemType
     , FlowItemType
