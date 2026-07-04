@@ -413,8 +413,10 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
     const dependencyLimit = config.get( 'dependencyLimit', DEPENDENCY_LIMIT );
     const minConnections = config.get( 'minConnections', 0 );
 
-    // set proper folder location according to first parameter
-    projectFolder = projectFolder.replace( /%20/g, ' ' );
+    // resolve project root (handles spaces and Windows URL-encoded paths)
+    const path = require( 'path' );
+    projectFolder = path.resolve( projectFolder.replace( /%20/g, ' ' ).replace( /\/\/\/(\w)\%3A/g, '$1:' ) );
+
     let sourceCodeFolders = getSourceCodeFolders( projectFolder );
     if( ! sourceCodeFolders || sourceCodeFolders.length === 0 ) {
         vscode.window.showErrorMessage(
@@ -619,8 +621,7 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
-    // replaced projectFolder with sourceCodeFolder to address Windows path issue
-    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, sourceCodeFolder
+    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
                             , dependencyCount, dependencyLimit );
 }
