@@ -1,0 +1,4 @@
+Debugger has been configured in .vscode/launch.json
+
+Just add breakpoints and select "Run Extension" on the debugger.
+It will launch another VSCode to execute the extension.

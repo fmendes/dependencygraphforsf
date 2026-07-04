@@ -27,6 +27,10 @@ if( process.platform === 'win32' ) {
 
 var getSourceCodeFolder = ( projectFolder ) => {
     const path = require( 'path' );
+
+    // fix Windows path
+    projectFolder = projectFolder.replace( /\/\/\/(\w)\%3A/g, '$1:' );
+
     projectFolder = path.resolve( projectFolder ); 
 
     // fix windows paths
@@ -560,7 +564,8 @@ function createGraph( projectFolder, selectedItem, myArgs ) {
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
-    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
+    // replaced projectFolder with sourceCodeFolder to address Windows path issue
+    DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, sourceCodeFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
                             , dependencyCount, dependencyLimit );
 }
