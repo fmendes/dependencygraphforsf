@@ -45,6 +45,7 @@ function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelect
 
 function displayGraph( graphDefinition, graphType, fullPath
             , styleSheetList, selectedItemDisplayName, independentItemList
+            , externallyUsedList
             , dependencyCount, dependencyLimit, cycleCount = 0 ) {
     // creates HTML containing graph and displays it
 
@@ -60,14 +61,23 @@ function displayGraph( graphDefinition, graphType, fullPath
     }
 
     // build HTML page with dependency graph
-    // independent items render as an HTML section below the diagram so they
-    // span the full page width and wrap naturally, instead of a Mermaid node
-    // whose width is dictated by its content
+    // independent and externally-used items render as HTML sections below the
+    // diagram so they span the full page width and wrap naturally, instead of
+    // Mermaid nodes whose width is dictated by their content
+    externallyUsedList = externallyUsedList || [];
     let independentItemElement = '';
-    if( independentItemList.length > 0 ) {
-        independentItemElement = `<div id="independentItems">`
-            + `<h3>ITEMS WITH NO DEPENDENCIES (${independentItemList.length})</h3>`
-            + `<p>${independentItemList.join( ' &bull; ' )}</p></div>`;
+    if( independentItemList.length > 0 || externallyUsedList.length > 0 ) {
+        let sections = '';
+        if( independentItemList.length > 0 ) {
+            sections += `<h3>ITEMS WITH NO DEPENDENCIES (${independentItemList.length})</h3>`
+                + `<p>${independentItemList.join( ' &bull; ' )}</p>`;
+        }
+        if( externallyUsedList.length > 0 ) {
+            sections += `<h3>USED ONLY OUTSIDE THIS GRAPH (${externallyUsedList.length})</h3>`
+                + `<p class="sectionNote">These items are referenced, but only by items not shown in this graph type.</p>`
+                + `<p>${externallyUsedList.join( ' &bull; ' )}</p>`;
+        }
+        independentItemElement = `<div id="independentItems">${sections}</div>`;
     }
 
     let theHeader = `${graphType} Dependency Graph for ${fullPath}`
@@ -197,7 +207,9 @@ body { background-color: white !important; color: #111 !important; transition: b
 #toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
 #independentItems { font-size: 11px; border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px; margin-top: 12px; }
 #independentItems h3 { margin: 0 0 6px 0; font-size: 12px; }
-#independentItems p { margin: 0; line-height: 1.6; }
+#independentItems p { margin: 0 0 8px 0; line-height: 1.6; }
+#independentItems .sectionNote { font-style: italic; color: #777; margin-bottom: 4px; }
+body.dark #independentItems .sectionNote { color: #999; }
 body.dark #independentItems { border-color: #555; }
 
 /* night mode: dark page, light edges and labels */

@@ -32,8 +32,16 @@ suite('Floating edgeless nodes', () => {
             'no click binding for a node that is not in the diagram'
         );
         const footer = graph.match(/<div id="independentItems">.*?<\/div>/s);
-        assert.ok(footer && footer[0].includes('FlowOnlyHelper CLASS'),
-            'expected FlowOnlyHelper in the footer list');
+        assert.ok(footer && footer[0].includes('USED ONLY OUTSIDE THIS GRAPH ('),
+            'expected the externally-used section');
+        const externalSection = footer[0].split('USED ONLY OUTSIDE THIS GRAPH')[1];
+        assert.ok(externalSection.includes('FlowOnlyHelper CLASS'),
+            'expected FlowOnlyHelper in the externally-used section');
+        const independentSection = footer[0].split('USED ONLY OUTSIDE THIS GRAPH')[0];
+        assert.ok(!independentSection.includes('FlowOnlyHelper CLASS'),
+            'FlowOnlyHelper must not be in the no-dependencies section');
+        assert.ok(independentSection.includes('StandaloneClass CLASS'),
+            'truly disconnected items stay in the no-dependencies section');
     });
 
     test('items referenced from inside the graph still render connected', () => {

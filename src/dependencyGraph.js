@@ -771,10 +771,11 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
     // items that are referenced only from OUTSIDE this graph (e.g. a class
     // used only by a flow, in a classes graph) would render as floating
     // edgeless nodes that the layout scatters between connected clusters —
-    // list them in the footer instead
+    // list them in their own footer section instead
+    let externallyUsedList = [];
     referencedOnlyCandidates.forEach( anItem => {
         if( ! linkedNodes.has( anItem.uniqueName ) ) {
-            independentItemList.push( `${anItem.displayName}` );
+            externallyUsedList.push( `${anItem.displayName}` );
             clickBindings.delete( anItem.uniqueName );
         }
     } );
@@ -815,6 +816,7 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
 
     DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
+                            , externallyUsedList
                             , dependencyCount, dependencyLimit, renderedCycleMembers.length );
 }
 
