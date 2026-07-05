@@ -2,7 +2,7 @@
 	"name": "dependencygraphforsf",
 	"displayName": "DependencyGraphForSF",
 	"description": "Creates dependency graphs for LWC, Aura, VisualForce, Apex Classes, Triggers and Flows",
-	"version": "1.1.1",
+	"version": "1.2.0",
 	"icon": "images/DependencyGraphForSF.png",
 	"galleryBanner": {
 		"color": "#ECECEC",
@@ -84,6 +84,16 @@
 					"default": 0,
 					"minimum": 0,
 					"description": "Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to 2 to hide leaf nodes and reduce clutter in large orgs. 0 means show everything."
+				},
+				"dependencygraphforsf.layoutEngine": {
+					"type": "string",
+					"enum": ["dagre", "elk"],
+					"default": "dagre",
+					"enumDescriptions": [
+						"Mermaid's default layout. Fast on small graphs.",
+						"Eclipse Layout Kernel. Much more compact layouts with fewer edge crossings — recommended for graphs with hundreds of edges. Loads an extra module from the CDN."
+					],
+					"description": "Layout engine for the dependency graphs."
 				},
 				"dependencygraphforsf.renderIn": {
 					"type": "string",

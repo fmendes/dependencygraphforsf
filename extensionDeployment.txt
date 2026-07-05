@@ -27,8 +27,8 @@ If you get the error "vsce.ps1 cannot be loaded because running scripts is disab
  2) if LocalMachine is Restricted, type Set-ExecutionPolicy RemoteSigned
 
  To publish the extension, you need to create a Personal Access Token (PAT) in your Visual Studio Marketplace account.
- Get the PAT from https://dev.azure.com/fmendes0323/_usersSettings/tokens (you can start navigation from https://marketplace.visualstudio.com/manage/publishers/fernandofernandez and click on the settings/profile options on the top right)
+ Get the PAT from https://dev.azure.com/AZURE_USERNAME/_usersSettings/tokens (you can start navigation from https://marketplace.visualstudio.com/manage/publishers/PUBLISHER_IDENTIFIER and click on the settings/profile options on the top right)
  vsce publish
- vsce show FERNANDOFERNANDEZ.dependencygraphforsf
+ vsce show PUBLISHER_IDENTIFIER.dependencygraphforsf
 
  The PAT method is expected to be deprecated in the future.

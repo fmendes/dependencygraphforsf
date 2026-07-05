@@ -17,7 +17,7 @@ Activate with Ctrl + Shift + P or right click a folder or file then select one o
 - **Zoom controls** — +, − and 100% buttons in the toolbar.
 - **Export SVG/PNG** — toolbar buttons save the graph as an image for docs and wikis.
 - **Depth control** — the selected-item graph includes items up to `selectedItemDepth` hops away (default 2); set it to 1 for direct dependencies only.
-- **Multi-selection** — select several files in the Explorer (Cmd/Ctrl-click), right-click and choose "Dependency graph for the selected item" to graph exactly those items and the dependencies between them; mixing types (classes, LWCs, flows...) works.
+- **Multi-selection** — select several files in the Explorer (Cmd/Ctrl-click), right-click and choose "Dependency graph for the selected item". The graph includes every selected item plus its dependencies and dependents of any type (classes, LWCs, flows...), up to `selectedItemDepth` hops away; all selected items are highlighted in red.
 - **Flows calling Apex** — invocable action calls and Apex-defined types in flows are detected and labeled on the edge.
 - **Triggers show their sObject** — trigger graphs include an `on` edge to the sObject the trigger fires on (light green cylinder).
 - **sObject usage graph** — the "Dependency graph for sObjects" command shows which classes, triggers, flows and workflows touch each sObject. Writers (DML, record updates, field updates) point into the sObject on the left; readers (SOQL, record lookups) and record-triggered flows branch out on the right. Right-click the `objects` folder for all sObjects, or a specific object subfolder (e.g. `objects/Account`) to scope the graph to that sObject; from the command palette you'll be prompted for a name.
@@ -56,6 +56,7 @@ Open Settings → Extensions → DependencyGraphForSF (or search for `dependency
 
 | Setting | Default | Description |
 |---|---|---|
+| `dependencygraphforsf.layoutEngine` | `dagre` | Layout engine for the graphs. `elk` (Eclipse Layout Kernel) produces more compact layouts with fewer edge crossings — recommended for graphs with hundreds of edges; it loads an extra module from the CDN. |
 | `dependencygraphforsf.renderIn` | `webview` | Where to display the graph: `webview` opens an editor tab inside VS Code; `browser` writes `dependencyGraph.html` to the project root and opens the default browser. |
 | `dependencygraphforsf.selectedItemDepth` | `2` | How many hops away from the selected item to include. `1` shows only direct dependencies/dependents. |
 | `dependencygraphforsf.dependencyLimit` | `900` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
@@ -69,6 +70,10 @@ When a graph hits the dependency limit, the page header suggests ways to reduce 
 None currently. (The earlier issue where the same graph rendered differently on consecutive runs was fixed by deterministic sorting and per-run cache clearing.)
 
 ## Release Notes
+
+### 1.2.0
+
+- New `layoutEngine` setting: choose ELK (Eclipse Layout Kernel) for more compact layouts with fewer edge crossings on large graphs
 
 ### 1.1.1
 

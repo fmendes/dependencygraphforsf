@@ -22,12 +22,21 @@ if( process.platform === 'win32' ) {
     folderDelimiter = '\\';
 }
 
-function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItem ) {
+// pinned CDN sources for the graph renderer; the CSP in buildGraphHTML only
+// allows scripts from CDN_ORIGIN, so all of these must live on that origin
+const CDN_ORIGIN = 'https://cdn.jsdelivr.net';
+const MERMAID_VERSION = '11';
+const ELK_LAYOUT_VERSION = '0';
+const MERMAID_UMD_URL = `${CDN_ORIGIN}/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js`;
+const MERMAID_ESM_URL = `${CDN_ORIGIN}/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.esm.min.mjs`;
+const ELK_LAYOUT_ESM_URL = `${CDN_ORIGIN}/npm/@mermaid-js/layout-elk@${ELK_LAYOUT_VERSION}/dist/mermaid-layout-elk.esm.min.mjs`;
+
+function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItems ) {
     // returns a list of styles from the elements in the graph
 
     // add CSS class to elements with more references
-    let styleSheetList = ( elementsWithMoreRefs.length > 0 ? 
-        `\nclassDef moreRefs fill:orange,stroke-width:4px;\nclass ${elementsWithMoreRefs} moreRefs\n` 
+    let styleSheetList = ( elementsWithMoreRefs.length > 0 ?
+        `\nclassDef moreRefs fill:orange,stroke-width:4px;\nclass ${elementsWithMoreRefs} moreRefs\n`
         : '' );
 
     // add CSS class for each type of item
@@ -36,15 +45,18 @@ function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelect
         styleSheetList += `\nclassDef ${itemType} fill:${color},stroke-width:4px;\nclass ${aListItem} ${itemType}\n`;
     } );
 
-    // highlight the selected item in the graph
-    if( theSelectedItem ) {
+    // highlight the selected item(s) in the graph; accepts one item or a list
+    let selectedList = ( ! theSelectedItems ? []
+                : Array.isArray( theSelectedItems ) ? theSelectedItems : [ theSelectedItems ] );
+    selectedList.forEach( theSelectedItem => {
         styleSheetList += `\nclassDef ${theSelectedItem.name}Item stroke:red,stroke-width:8px;\nclass ${theSelectedItem.uniqueName} ${theSelectedItem.name}Item\n`;
-    }
+    } );
     return styleSheetList;
 }
 
 function displayGraph( graphDefinition, graphType, fullPath
             , styleSheetList, selectedItemDisplayName, independentItemList
+            , externallyUsedList
             , dependencyCount, dependencyLimit, cycleCount = 0 ) {
     // creates HTML containing graph and displays it
 
@@ -60,14 +72,23 @@ function displayGraph( graphDefinition, graphType, fullPath
     }
 
     // build HTML page with dependency graph
-    // independent items render as an HTML section below the diagram so they
-    // span the full page width and wrap naturally, instead of a Mermaid node
-    // whose width is dictated by its content
+    // independent and externally-used items render as HTML sections below the
+    // diagram so they span the full page width and wrap naturally, instead of
+    // Mermaid nodes whose width is dictated by their content
+    externallyUsedList = externallyUsedList || [];
     let independentItemElement = '';
-    if( independentItemList.length > 0 ) {
-        independentItemElement = `<div id="independentItems">`
-            + `<h3>ITEMS WITH NO DEPENDENCIES (${independentItemList.length})</h3>`
-            + `<p>${independentItemList.join( ' &bull; ' )}</p></div>`;
+    if( independentItemList.length > 0 || externallyUsedList.length > 0 ) {
+        let sections = '';
+        if( independentItemList.length > 0 ) {
+            sections += `<h3>ITEMS WITH NO DEPENDENCIES (${independentItemList.length})</h3>`
+                + `<p>${independentItemList.join( ' &bull; ' )}</p>`;
+        }
+        if( externallyUsedList.length > 0 ) {
+            sections += `<h3>USED ONLY OUTSIDE THIS GRAPH (${externallyUsedList.length})</h3>`
+                + `<p class="sectionNote">These items are referenced, but only by items not shown in this graph type.</p>`
+                + `<p>${externallyUsedList.join( ' &bull; ' )}</p>`;
+        }
+        independentItemElement = `<div id="independentItems">${sections}</div>`;
     }
 
     let theHeader = `${graphType} Dependency Graph for ${fullPath}`
@@ -157,11 +178,41 @@ function showGraphInWebview( graphHTML, title ) {
     } );
 }
 
+function getMermaidLoaderScript( layoutEngine, maxTextSize, maxEdges ) {
+    // returns the script block that loads and initializes Mermaid;
+    // ELK requires the ESM build plus the layout-elk module, dagre uses the UMD build
+    const configBody = `startOnLoad:false,maxTextSize:${maxTextSize},maxEdges:${maxEdges}`
+        + `,flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'`;
+
+    if( layoutEngine === 'elk' ) {
+        return `<script type="module">
+import mermaid from '${MERMAID_ESM_URL}';
+import elkLayouts from '${ELK_LAYOUT_ESM_URL}';
+mermaid.registerLayoutLoaders(elkLayouts);
+mermaid.initialize({${configBody},layout:'elk'});
+await mermaid.run({querySelector:'.mermaid'});
+</script>`;
+    }
+
+    return `<script src="${MERMAID_UMD_URL}"></script>
+<script>
+mermaid.initialize({${configBody}});
+mermaid.run({querySelector:'.mermaid'});
+</script>`;
+}
+
 function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 190000, maxEdges = 2000 ) {
     // builds HTML page with embedded Mermaid graph, search box, export buttons
     // and a script to adjust the graph height; works in a browser and in a
     // VS Code webview (detected via acquireVsCodeApi)
+    const layoutEngine = vscode.workspace.getConfiguration( 'dependencygraphforsf' )
+                                .get( 'layoutEngine', 'dagre' );
+    // explicit CSP:  only our inline scripts and the jsdelivr CDN (Mermaid/ELK)
+    // may execute; graph labels derived from scanned files can never inject
+    // runnable content from anywhere else. img data: is for the PNG export,
+    // font/style allowances are for Mermaid's injected styles.
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' ${CDN_ORIGIN}; style-src 'unsafe-inline' ${CDN_ORIGIN}; img-src data:; font-src data: ${CDN_ORIGIN};">
 <style>
 /* explicit light defaults:  the VS Code webview injects the editor theme's
    background, so without these the "light" mode would inherit a dark page */
@@ -172,7 +223,9 @@ body { background-color: white !important; color: #111 !important; transition: b
 #toolbar button { padding: 4px 12px; margin-left: 8px; cursor: pointer; }
 #independentItems { font-size: 11px; border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px; margin-top: 12px; }
 #independentItems h3 { margin: 0 0 6px 0; font-size: 12px; }
-#independentItems p { margin: 0; line-height: 1.6; }
+#independentItems p { margin: 0 0 8px 0; line-height: 1.6; }
+#independentItems .sectionNote { font-style: italic; color: #777; margin-bottom: 4px; }
+body.dark #independentItems .sectionNote { color: #999; }
 body.dark #independentItems { border-color: #555; }
 
 /* night mode: dark page, light edges and labels */
@@ -199,11 +252,8 @@ body.dark #theGraph .edgeLabel rect { fill: #333 !important; }
 graph LR\n${graphBody}
 </div>
 ${footerHTML}
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
-
-mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},maxEdges:${maxEdges},flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'});
 
 // inside a webview, vscode:// links must not navigate: VS Code's own link
 // handler would ALSO open them (prompt + duplicate tab). Strip the hrefs
@@ -336,13 +386,16 @@ function exportPNG() {
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
 }
 </script>
+${getMermaidLoaderScript( layoutEngine, maxTextSize, maxEdges )}
 </body></html>`;
 }
 
 function buildReportHTML( theHeader, bodyHTML ) {
     // builds a simple HTML report page with clickable vscode://file links
-    // that work both in a browser and in a VS Code webview
+    // that work both in a browser and in a VS Code webview; the CSP allows
+    // only our inline script and styles — reports load nothing external
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
 <style>
 body { font-family: sans-serif; margin: 20px; }
 li { margin: 2px 0; }

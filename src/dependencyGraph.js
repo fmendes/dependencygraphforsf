@@ -625,12 +625,29 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
     let dependencyCount = 0;
     let clickBindings = new Map();
     let sObjectNodes = new Set();
+    let linkedNodes = new Set();
+    let referencedOnlyCandidates = [];
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
 
-    // when an item is selected, BFS out to selectedItemDepth hops in both
-    // directions (dependencies and dependents) to decide what stays in the graph
-    let includedSet = null;
+    // seeds:  the single right-clicked item, or every item of a multi-selection
+    let selectedSeedItems = [];
     if( theSelectedItem ) {
+        selectedSeedItems.push( theSelectedItem );
+    }
+    if( multiSelectedSet ) {
+        multiSelectedSet.forEach( uniqueName => {
+            let anItem = crossReferenceMap.get( uniqueName );
+            if( anItem ) {
+                selectedSeedItems.push( anItem );
+            }
+        } );
+    }
+
+    // when items are selected, BFS out to selectedItemDepth hops in both
+    // directions (dependencies and dependents, regardless of type) to decide
+    // what stays in the graph
+    let includedSet = null;
+    if( selectedSeedItems.length > 0 ) {
         // reverse edges:  who references each item
         let reverseReferenceMap = new Map();
         crossReferenceMap.forEach( anItem => {
@@ -644,8 +661,8 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
             } );
         } );
 
-        includedSet = new Set( [ theSelectedItem ] );
-        let frontier = [ theSelectedItem ];
+        includedSet = new Set( selectedSeedItems );
+        let frontier = [...selectedSeedItems];
         for( let hop = 0; hop < selectedItemDepth; hop++ ) {
             let nextFrontier = [];
             frontier.forEach( anItem => {
@@ -670,12 +687,7 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
     }
 
     sortedClassReferenceArray.forEach( anItem => {
-        // with a multi-selection, keep only the selected items
-        if( multiSelectedSet && ! multiSelectedSet.has( anItem.uniqueName ) ) {
-            return;
-        }
-
-        // if an item was selected, keep only items within selectedItemDepth hops of it
+        // if items were selected, keep only items within selectedItemDepth hops
         if( includedSet && ! includedSet.has( anItem ) ) {
             return;
         }
@@ -701,11 +713,17 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
         // make node clickable:  opens the item's file in VS Code
         clickBindings.set( anItem.uniqueName, anItem.filePath );
 
-        // display items that do not have dependencies as a single shape
-        // (triggers with an sObject edge are not independent)
+        // items with no outgoing references go to the footer list — unless they
+        // are referenced from within this graph, which is only known once all
+        // edges are drawn, so defer those (triggers with an sObject edge are
+        // never independent)
         if( ( ! anItem.referencesSet || anItem.referencesSet.size === 0 )
                 && ! ( anItem.itemType.type === TRIGGERType && anItem.additionalInfo ) ) {
-            independentItemList.push( `${anItem.displayName}` );
+            if( anItem.referencedCount > 0 ) {
+                referencedOnlyCandidates.push( anItem );
+            } else {
+                independentItemList.push( `${anItem.displayName}` );
+            }
         }
 
         // highlight in orange items that depend on HIGH_REF_THRESHOLD+ other items
@@ -725,15 +743,11 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
             let sObject = anItem.additionalInfo;
             sObjectNodes.add( sObject );
             graphDefinition += `${anItem.uniqueName}(${anItem.displayName}) -->|on| sobj_${sObject}[(${sObject})]\n`;
+            linkedNodes.add( anItem.uniqueName );
         }
 
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
-            // keep only edges between selected items
-            if( multiSelectedSet && ! multiSelectedSet.has( aReference.uniqueName ) ) {
-                return;
-            }
-
             // keep only edges between items that survived the depth filter
             if( includedSet && ! includedSet.has( aReference ) ) {
                 return;
@@ -751,15 +765,23 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
             // encode flow from a dependant item to a referenced item
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName}) --> ${aReference.uniqueName}${methodList}\n`;
             graphDefinition += dependencyFlow;
+            linkedNodes.add( anItem.uniqueName );
+            linkedNodes.add( aReference.uniqueName );
 
             // referenced items also get a click binding
             clickBindings.set( aReference.uniqueName, aReference.filePath );
         } );
+    } );
 
-        // prepare Mermaid output for items that don't have dependencies but are referenced by other items
-        if( anItem.referencesSet.size === 0 && anItem.referencedCount > 0 ) {
-            let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName})\n`;
-            graphDefinition += dependencyFlow;
+    // items that are referenced only from OUTSIDE this graph (e.g. a class
+    // used only by a flow, in a classes graph) would render as floating
+    // edgeless nodes that the layout scatters between connected clusters —
+    // list them in their own footer section instead
+    let externallyUsedList = [];
+    referencedOnlyCandidates.forEach( anItem => {
+        if( ! linkedNodes.has( anItem.uniqueName ) ) {
+            externallyUsedList.push( `${anItem.displayName}` );
+            clickBindings.delete( anItem.uniqueName );
         }
     } );
 
@@ -793,12 +815,13 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
                 : getGraphTypeDescription( graphType ) );
 
     let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap
-                                                    , listByType, theSelectedItem );
+                                                    , listByType, selectedSeedItems );
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
     DisplayGraph.displayGraph( graphDefinition, graphTypeDescription, projectFolder
                             , styleSheetList, selectedItemDisplayName, independentItemList
+                            , externallyUsedList
                             , dependencyCount, dependencyLimit, renderedCycleMembers.length );
 }
 
