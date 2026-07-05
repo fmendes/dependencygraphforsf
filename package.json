@@ -160,7 +160,7 @@
 				},
 				{
 					"command": "dependencygraphforsf.orphansReport",
-					"when": "explorerResourceIsFolder && resourceFilename =~ /^(force-app|default)$/"
+					"when": "explorerResourceIsFolder"
 				}
 			]
 		}
