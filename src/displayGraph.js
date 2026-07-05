@@ -157,10 +157,35 @@ function showGraphInWebview( graphHTML, title ) {
     } );
 }
 
+function getMermaidLoaderScript( layoutEngine, maxTextSize, maxEdges ) {
+    // returns the script block that loads and initializes Mermaid;
+    // ELK requires the ESM build plus the layout-elk module, dagre uses the UMD build
+    const configBody = `startOnLoad:false,maxTextSize:${maxTextSize},maxEdges:${maxEdges}`
+        + `,flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'`;
+
+    if( layoutEngine === 'elk' ) {
+        return `<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+mermaid.initialize({${configBody},layout:'elk'});
+await mermaid.run({querySelector:'.mermaid'});
+</script>`;
+    }
+
+    return `<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({${configBody}});
+mermaid.run({querySelector:'.mermaid'});
+</script>`;
+}
+
 function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 190000, maxEdges = 2000 ) {
     // builds HTML page with embedded Mermaid graph, search box, export buttons
     // and a script to adjust the graph height; works in a browser and in a
     // VS Code webview (detected via acquireVsCodeApi)
+    const layoutEngine = vscode.workspace.getConfiguration( 'dependencygraphforsf' )
+                                .get( 'layoutEngine', 'dagre' );
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <style>
 /* explicit light defaults:  the VS Code webview injects the editor theme's
@@ -199,11 +224,8 @@ body.dark #theGraph .edgeLabel rect { fill: #333 !important; }
 graph LR\n${graphBody}
 </div>
 ${footerHTML}
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
 var vscodeApi = ( typeof acquireVsCodeApi === 'function' ) ? acquireVsCodeApi() : null;
-
-mermaid.initialize({startOnLoad:true,maxTextSize:${maxTextSize},maxEdges:${maxEdges},flowchart:{maxEdges:${maxEdges}},securityLevel:'loose'});
 
 // inside a webview, vscode:// links must not navigate: VS Code's own link
 // handler would ALSO open them (prompt + duplicate tab). Strip the hrefs
@@ -336,6 +358,7 @@ function exportPNG() {
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(data);
 }
 </script>
+${getMermaidLoaderScript( layoutEngine, maxTextSize, maxEdges )}
 </body></html>`;
 }
 

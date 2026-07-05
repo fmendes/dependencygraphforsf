@@ -56,6 +56,7 @@ Open Settings → Extensions → DependencyGraphForSF (or search for `dependency
 
 | Setting | Default | Description |
 |---|---|---|
+| `dependencygraphforsf.layoutEngine` | `dagre` | Layout engine for the graphs. `elk` (Eclipse Layout Kernel) produces more compact layouts with fewer edge crossings — recommended for graphs with hundreds of edges; it loads an extra module from the CDN. |
 | `dependencygraphforsf.renderIn` | `webview` | Where to display the graph: `webview` opens an editor tab inside VS Code; `browser` writes `dependencyGraph.html` to the project root and opens the default browser. |
 | `dependencygraphforsf.selectedItemDepth` | `2` | How many hops away from the selected item to include. `1` shows only direct dependencies/dependents. |
 | `dependencygraphforsf.dependencyLimit` | `900` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
@@ -69,6 +70,10 @@ When a graph hits the dependency limit, the page header suggests ways to reduce 
 None currently. (The earlier issue where the same graph rendered differently on consecutive runs was fixed by deterministic sorting and per-run cache clearing.)
 
 ## Release Notes
+
+### 1.2.0
+
+- New `layoutEngine` setting: choose ELK (Eclipse Layout Kernel) for more compact layouts with fewer edge crossings on large graphs
 
 ### 1.1.1
 
