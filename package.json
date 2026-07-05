@@ -2,7 +2,7 @@
 	"name": "dependencygraphforsf",
 	"displayName": "DependencyGraphForSF",
 	"description": "Creates dependency graphs for LWC, Aura, VisualForce, Apex Classes, Triggers and Flows",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"icon": "images/DependencyGraphForSF.png",
 	"galleryBanner": {
 		"color": "#ECECEC",
@@ -21,7 +21,10 @@
 		"onCommand:dependencygraphforsf.graphLWCs",
 		"onCommand:dependencygraphforsf.graphAuraComponents",
 		"onCommand:dependencygraphforsf.graphVisualforcePages",
-		"onCommand:dependencygraphforsf.graphItem"
+		"onCommand:dependencygraphforsf.graphItem",
+		"onCommand:dependencygraphforsf.graphClassInternals",
+		"onCommand:dependencygraphforsf.graphSObjects",
+		"onCommand:dependencygraphforsf.orphansReport"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -57,6 +60,14 @@
 			{
 				"command": "dependencygraphforsf.graphClassInternals",
 				"title": "Internal dependency graph for this class"
+			},
+			{
+				"command": "dependencygraphforsf.graphSObjects",
+				"title": "Dependency graph for sObjects (reads/writes)"
+			},
+			{
+				"command": "dependencygraphforsf.orphansReport",
+				"title": "Orphans report (items nothing references)"
 			}
 		],
 		"configuration": {
@@ -64,7 +75,7 @@
 			"properties": {
 				"dependencygraphforsf.dependencyLimit": {
 					"type": "integer",
-					"default": 700,
+					"default": 900,
 					"minimum": 100,
 					"description": "Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering)."
 				},
@@ -73,6 +84,23 @@
 					"default": 0,
 					"minimum": 0,
 					"description": "Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to 2 to hide leaf nodes and reduce clutter in large orgs. 0 means show everything."
+				},
+				"dependencygraphforsf.renderIn": {
+					"type": "string",
+					"enum": ["webview", "browser"],
+					"default": "webview",
+					"enumDescriptions": [
+						"Show the graph in a VS Code editor tab (recommended)",
+						"Write dependencyGraph.html to the project root and open it in the default browser"
+					],
+					"description": "Where to display the generated dependency graph."
+				},
+				"dependencygraphforsf.selectedItemDepth": {
+					"type": "integer",
+					"default": 2,
+					"minimum": 1,
+					"maximum": 10,
+					"description": "How many hops away from the selected item to include in its dependency graph. 1 shows only direct dependencies/dependents; 2 (default) includes grandparents and grandchildren."
 				},
 				"dependencygraphforsf.sourceFolders": {
 					"type": "array",
@@ -104,51 +132,35 @@
 				},
 				{
 					"command": "dependencygraphforsf.graphTriggers",
-					"when": " resourceDirname =~ /triggers/ "
+					"when": "resourcePath =~ /[\\\\/]triggers([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphLWCs",
-					"when": " resourceDirname =~ /lwc/ "
+					"when": "resourcePath =~ /[\\\\/]lwc([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphClasses",
-					"when": " resourceDirname =~ /classes/ "
+					"when": "resourcePath =~ /[\\\\/]classes([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphAuraComponents",
-					"when": " resourceDirname =~ /aura/ "
+					"when": "resourcePath =~ /[\\\\/]aura([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphFlows",
-					"when": " resourceDirname =~ /flows/ "
+					"when": "resourcePath =~ /[\\\\/]flows([\\\\/]|$)/"
 				},
 				{
 					"command": "dependencygraphforsf.graphVisualforcePages",
-					"when": " resourceDirname =~ /pages/ "
+					"when": "resourcePath =~ /[\\\\/](pages|components)([\\\\/]|$)/"
 				},
 				{
-					"command": "dependencygraphforsf.graphTriggers",
-					"when": " explorerResourceIsFolder && resourceFilename == triggers "
+					"command": "dependencygraphforsf.graphSObjects",
+					"when": "resourcePath =~ /[\\\\/]objects([\\\\/]|$)/"
 				},
 				{
-					"command": "dependencygraphforsf.graphLWCs",
-					"when": " explorerResourceIsFolder && resourceFilename == lwc "
-				},
-				{
-					"command": "dependencygraphforsf.graphClasses",
-					"when": " explorerResourceIsFolder && resourceFilename == classes "
-				},
-				{
-					"command": "dependencygraphforsf.graphAuraComponents",
-					"when": " explorerResourceIsFolder && resourceFilename == aura "
-				},
-				{
-					"command": "dependencygraphforsf.graphFlows",
-					"when": " explorerResourceIsFolder && resourceFilename == flows "
-				},
-				{
-					"command": "dependencygraphforsf.graphVisualforcePages",
-					"when": " explorerResourceIsFolder && resourceFilename == pages "
+					"command": "dependencygraphforsf.orphansReport",
+					"when": "explorerResourceIsFolder"
 				}
 			]
 		}

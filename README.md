@@ -10,7 +10,19 @@ This extension will open a dependency graph for the selected type of element: Ap
 
 Activate with Ctrl + Shift + P or right click a folder or file then select one of the "Dependency graph..." options.
 
-- **Clickable nodes** — clicking a node in the graph opens the corresponding source file in VS Code (the browser may ask for permission to open VS Code on the first click).
+- **Graph opens inside VS Code** — the graph renders in an editor tab (webview). Set `renderIn` to `browser` for the previous behavior of opening an HTML file in your browser.
+- **Clickable nodes** — clicking a node opens the corresponding source file (beside the graph when in the webview).
+- **Search/filter box** — type in the toolbar to fade out non-matching nodes.
+- **Day/night mode** — toolbar toggle switches to a dark background with light edges and labels; follows your OS preference by default and remembers your choice.
+- **Zoom controls** — +, − and 100% buttons in the toolbar.
+- **Export SVG/PNG** — toolbar buttons save the graph as an image for docs and wikis.
+- **Depth control** — the selected-item graph includes items up to `selectedItemDepth` hops away (default 2); set it to 1 for direct dependencies only.
+- **Multi-selection** — select several files in the Explorer (Cmd/Ctrl-click), right-click and choose "Dependency graph for the selected item" to graph exactly those items and the dependencies between them; mixing types (classes, LWCs, flows...) works.
+- **Flows calling Apex** — invocable action calls and Apex-defined types in flows are detected and labeled on the edge.
+- **Triggers show their sObject** — trigger graphs include an `on` edge to the sObject the trigger fires on (light green cylinder).
+- **sObject usage graph** — the "Dependency graph for sObjects" command shows which classes, triggers, flows and workflows touch each sObject. Writers (DML, record updates, field updates) point into the sObject on the left; readers (SOQL, record lookups) and record-triggered flows branch out on the right. Right-click the `objects` folder for all sObjects, or a specific object subfolder (e.g. `objects/Account`) to scope the graph to that sObject; from the command palette you'll be prompted for a name.
+- **Circular dependency highlighting** — items that form reference cycles get a red dashed border, and the header reports the count.
+- **Orphans report** — lists disconnected items (no references in or out — dead-code candidates) and unreferenced items, with clickable links.
 - **Packaged flows are excluded** — flows from managed packages (names with a `namespace__` prefix) are filtered out so they don't clutter the big picture.
 - **Multi-package projects** — all `packageDirectories` from `sfdx-project.json` are scanned and merged into a single graph, so cross-package dependencies show up.
 
@@ -44,7 +56,9 @@ Open Settings → Extensions → DependencyGraphForSF (or search for `dependency
 
 | Setting | Default | Description |
 |---|---|---|
-| `dependencygraphforsf.dependencyLimit` | `700` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
+| `dependencygraphforsf.renderIn` | `webview` | Where to display the graph: `webview` opens an editor tab inside VS Code; `browser` writes `dependencyGraph.html` to the project root and opens the default browser. |
+| `dependencygraphforsf.selectedItemDepth` | `2` | How many hops away from the selected item to include. `1` shows only direct dependencies/dependents. |
+| `dependencygraphforsf.dependencyLimit` | `900` | Maximum number of dependency edges to render. Increase for larger orgs (may slow browser rendering). |
 | `dependencygraphforsf.minConnections` | `0` | Minimum total connections (inbound + outbound) required for an item to appear in the graph. Set to `2` to hide leaf nodes and reduce clutter in large orgs. `0` shows everything. |
 | `dependencygraphforsf.sourceFolders` | `[]` | Explicit list of source folders to scan, relative to the project root (e.g. `["my-package/main/default"]`). Overrides the automatic `sfdx-project.json` detection. Leave empty for auto-detect. |
 
@@ -55,6 +69,17 @@ When a graph hits the dependency limit, the page header suggests ways to reduce 
 None currently. (The earlier issue where the same graph rendered differently on consecutive runs was fixed by deterministic sorting and per-run cache clearing.)
 
 ## Release Notes
+
+### 1.1.1
+
+- Graph opens in a VS Code webview panel (configurable via `renderIn`)
+- Search/filter box, day/night toggle, zoom controls and SVG/PNG export in the graph toolbar
+- Depth control for the selected-item graph (`selectedItemDepth`)
+- Flows calling invocable Apex are detected and labeled
+- Triggers show an edge to the sObject they fire on
+- New command: sObject usage graph (which classes/triggers read or write each sObject)
+- Circular dependencies highlighted with a red dashed border
+- New command: orphans report (disconnected and unreferenced items)
 
 ### 1.1.0
 

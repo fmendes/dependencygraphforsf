@@ -18,6 +18,7 @@ const vscode = require('vscode');
 
 const DependencyGraph = require('./src/dependencyGraph.js');
 const SingleClassGraph = require('./src/singleClassDependencyGraph.js');
+const SObjectGraph = require('./src/sObjectGraph.js');
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -75,12 +76,8 @@ function activate(context) {
 
 		DependencyGraph.createGraph( folderPath, null, [ '--vf' ] );
 	}
-	let graphItemHandler = ( uri ) => {
-		let folderPath = getFolderPath();
-		if( ! folderPath ) {
-			return;
-		}
-
+	let getItemFromUri = ( uri ) => {
+		// derives the item name and graph type flag from a file uri
 		let uriPathArray = uri.path.split( '.' );
 		let extension = uriPathArray.pop();
 		let graphType = extension === 'cls' ? '--classes' :
@@ -98,11 +95,68 @@ function activate(context) {
 			graphType = '--lwc';
 		}
 		if( ! graphType ) {
-			return;
+			return null;
 		}
 
 		let fileName = uriPathArray[ 0 ].split( '/' ).pop();
-		DependencyGraph.createGraph( folderPath, fileName, [ graphType ] );
+		return { fileName, graphType };
+	}
+	let graphItemHandler = ( uri, selectedUris ) => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		// multi-selection in the explorer:  graph only the selected items
+		if( selectedUris && selectedUris.length > 1 ) {
+			let items = selectedUris.map( getItemFromUri ).filter( Boolean );
+			if( items.length > 1 ) {
+				DependencyGraph.createGraph( folderPath, null, [ items[ 0 ].graphType ], items );
+				return;
+			}
+		}
+
+		let item = getItemFromUri( uri );
+		if( ! item ) {
+			return;
+		}
+		DependencyGraph.createGraph( folderPath, item.fileName, [ item.graphType ] );
+	}
+	let graphSObjectsHandler = async ( uri ) => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		let sObjectFilter = null;
+
+		// right-clicking an object subfolder (e.g. objects/Account) pre-fills the filter
+		if( uri && uri.path && uri.path.includes( '/objects' ) ) {
+			let segments = uri.path.split( '/' );
+			let objectsIndex = segments.indexOf( 'objects' );
+			if( objectsIndex >= 0 && segments.length > objectsIndex + 1 ) {
+				sObjectFilter = segments[ objectsIndex + 1 ];
+			}
+		} else {
+			sObjectFilter = await vscode.window.showInputBox( {
+				prompt: 'sObject to filter by (leave empty to show all sObjects)',
+				placeHolder: 'e.g. Account'
+			} );
+			if( sObjectFilter === undefined ) {
+				return; // user cancelled
+			}
+			sObjectFilter = sObjectFilter || null;
+		}
+
+		SObjectGraph.createSObjectGraph( folderPath.replace( /%20/g, ' ' ), sObjectFilter );
+	}
+	let orphansReportHandler = () => {
+		let folderPath = getFolderPath();
+		if( ! folderPath ) {
+			return;
+		}
+
+		DependencyGraph.createOrphansReport( folderPath.replace( /%20/g, ' ' ) );
 	}
 	let graphClassInternalsHandler = ( uri ) => {
 		let folderPath = getFolderPath();
@@ -130,8 +184,13 @@ function activate(context) {
 
 	let classInternalsHandler = vscode.commands.registerCommand('dependencygraphforsf.graphClassInternals', graphClassInternalsHandler );
 
+	let sObjectsHandler = vscode.commands.registerCommand('dependencygraphforsf.graphSObjects', graphSObjectsHandler );
+
+	let orphansHandler = vscode.commands.registerCommand('dependencygraphforsf.orphansReport', orphansReportHandler );
+
 	context.subscriptions.push( classHandler, triggerHandler, flowHandler
-					, lwcHandler, auraHandler, vfHandler, itemHandler, classInternalsHandler );
+					, lwcHandler, auraHandler, vfHandler, itemHandler
+					, classInternalsHandler, sObjectsHandler, orphansHandler );
 }
 
 function getFolderPath() {

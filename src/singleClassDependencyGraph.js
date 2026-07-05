@@ -202,7 +202,8 @@ function createSingleClassGraph( classFilePath, projectFolder ) {
                     + `<br><br>Methods: ${methodCount}. Cylinders are sObjects (read/write labels on arrows). Click a node to open it in VS Code.`;
 
     const graphHTML = DisplayGraph.buildGraphHTML( theHeader, `${graphDefinition}${styleSheetList}` );
-    DisplayGraph.openBrowserWithGraph( projectFolder, graphHTML, 'singleClassDependencyGraph.html' );
+    DisplayGraph.presentGraph( projectFolder, graphHTML, 'singleClassDependencyGraph.html'
+                            , `${className} internal graph` );
 }
 
 module.exports = {

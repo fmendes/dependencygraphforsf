@@ -210,8 +210,8 @@ suite('DisplayGraph.getStyleSheet', () => {
 // Constants
 // ---------------------------------------------------------------------------
 suite('Module constants', () => {
-    test('DEPENDENCY_LIMIT is 700', () => {
-        assert.strictEqual(DependencyGraph.DEPENDENCY_LIMIT, 700);
+    test('DEPENDENCY_LIMIT is 900', () => {
+        assert.strictEqual(DependencyGraph.DEPENDENCY_LIMIT, 900);
     });
 
     test('HIGH_REF_THRESHOLD is 6', () => {
