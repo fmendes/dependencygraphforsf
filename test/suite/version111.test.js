@@ -232,15 +232,30 @@ suite('Multi-selection graph', () => {
         { fileName: 'RightClass', graphType: '--classes' }
     ];
 
-    test('graphs only the selected items and the edges between them', () => {
+    test('graphs the selected items with their dependencies of any type', () => {
         DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes'], multiItems);
         const graph = readAndDeleteGraph();
         assert.ok(
             graph.includes('TopLevelClass-CLASS(TopLevelClass CLASS) --> RightClass-CLASS'),
             'expected the edge between the two selected items'
         );
-        assert.ok(!graph.includes('LeftClass-CLASS'), 'unselected items must be excluded');
-        assert.ok(!graph.includes('HubClass-CLASS'), 'unselected items must be excluded');
+        // exhaustive: dependencies of the selected items come along...
+        assert.ok(graph.includes('LeftClass-CLASS'), 'dependency of a selected item must be included');
+        // ...including cross-type dependents
+        assert.ok(
+            graph.includes('myComponent-LWC(myComponent LWC) --> TopLevelClass-CLASS'),
+            'cross-type dependent of a selected item must be included'
+        );
+        // but unrelated items stay out
+        assert.ok(!graph.includes('HubClass-CLASS'), 'unrelated items must be excluded');
+        assert.ok(!graph.includes('StandaloneClass-CLASS('), 'unrelated items must be excluded');
+    });
+
+    test('all selected items get the red highlight', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes'], multiItems);
+        const graph = readAndDeleteGraph();
+        assert.ok(graph.includes('classDef TopLevelClassItem stroke:red'), 'first selected item highlighted');
+        assert.ok(graph.includes('classDef RightClassItem stroke:red'), 'second selected item highlighted');
     });
 
     test('mixed-type selections are allowed', () => {

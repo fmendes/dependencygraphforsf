@@ -22,12 +22,12 @@ if( process.platform === 'win32' ) {
     folderDelimiter = '\\';
 }
 
-function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItem ) {
+function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItems ) {
     // returns a list of styles from the elements in the graph
 
     // add CSS class to elements with more references
-    let styleSheetList = ( elementsWithMoreRefs.length > 0 ? 
-        `\nclassDef moreRefs fill:orange,stroke-width:4px;\nclass ${elementsWithMoreRefs} moreRefs\n` 
+    let styleSheetList = ( elementsWithMoreRefs.length > 0 ?
+        `\nclassDef moreRefs fill:orange,stroke-width:4px;\nclass ${elementsWithMoreRefs} moreRefs\n`
         : '' );
 
     // add CSS class for each type of item
@@ -36,10 +36,12 @@ function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelect
         styleSheetList += `\nclassDef ${itemType} fill:${color},stroke-width:4px;\nclass ${aListItem} ${itemType}\n`;
     } );
 
-    // highlight the selected item in the graph
-    if( theSelectedItem ) {
+    // highlight the selected item(s) in the graph; accepts one item or a list
+    let selectedList = ( ! theSelectedItems ? []
+                : Array.isArray( theSelectedItems ) ? theSelectedItems : [ theSelectedItems ] );
+    selectedList.forEach( theSelectedItem => {
         styleSheetList += `\nclassDef ${theSelectedItem.name}Item stroke:red,stroke-width:8px;\nclass ${theSelectedItem.uniqueName} ${theSelectedItem.name}Item\n`;
-    }
+    } );
     return styleSheetList;
 }
 

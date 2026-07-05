@@ -629,10 +629,25 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
     let referencedOnlyCandidates = [];
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
 
-    // when an item is selected, BFS out to selectedItemDepth hops in both
-    // directions (dependencies and dependents) to decide what stays in the graph
-    let includedSet = null;
+    // seeds:  the single right-clicked item, or every item of a multi-selection
+    let selectedSeedItems = [];
     if( theSelectedItem ) {
+        selectedSeedItems.push( theSelectedItem );
+    }
+    if( multiSelectedSet ) {
+        multiSelectedSet.forEach( uniqueName => {
+            let anItem = crossReferenceMap.get( uniqueName );
+            if( anItem ) {
+                selectedSeedItems.push( anItem );
+            }
+        } );
+    }
+
+    // when items are selected, BFS out to selectedItemDepth hops in both
+    // directions (dependencies and dependents, regardless of type) to decide
+    // what stays in the graph
+    let includedSet = null;
+    if( selectedSeedItems.length > 0 ) {
         // reverse edges:  who references each item
         let reverseReferenceMap = new Map();
         crossReferenceMap.forEach( anItem => {
@@ -646,8 +661,8 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
             } );
         } );
 
-        includedSet = new Set( [ theSelectedItem ] );
-        let frontier = [ theSelectedItem ];
+        includedSet = new Set( selectedSeedItems );
+        let frontier = [...selectedSeedItems];
         for( let hop = 0; hop < selectedItemDepth; hop++ ) {
             let nextFrontier = [];
             frontier.forEach( anItem => {
@@ -672,12 +687,7 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
     }
 
     sortedClassReferenceArray.forEach( anItem => {
-        // with a multi-selection, keep only the selected items
-        if( multiSelectedSet && ! multiSelectedSet.has( anItem.uniqueName ) ) {
-            return;
-        }
-
-        // if an item was selected, keep only items within selectedItemDepth hops of it
+        // if items were selected, keep only items within selectedItemDepth hops
         if( includedSet && ! includedSet.has( anItem ) ) {
             return;
         }
@@ -738,11 +748,6 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
 
         // prepare Mermaid output for dependencies
         anItem.referencesSet.forEach( aReference => {
-            // keep only edges between selected items
-            if( multiSelectedSet && ! multiSelectedSet.has( aReference.uniqueName ) ) {
-                return;
-            }
-
             // keep only edges between items that survived the depth filter
             if( includedSet && ! includedSet.has( aReference ) ) {
                 return;
@@ -810,7 +815,7 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
                 : getGraphTypeDescription( graphType ) );
 
     let styleSheetList = DisplayGraph.getStyleSheet( elementsWithMoreRefs, itemTypeMap
-                                                    , listByType, theSelectedItem );
+                                                    , listByType, selectedSeedItems );
 
     let selectedItemDisplayName = ( theSelectedItem? theSelectedItem.displayName : null );
 
