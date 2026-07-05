@@ -16,6 +16,38 @@ function readAndDeleteGraph() {
     return html;
 }
 
+suite('Floating edgeless nodes', () => {
+    test('items referenced only from outside the graph go to the footer, not the diagram', () => {
+        // FlowOnlyHelper is referenced only by InvocableFlow, so in a classes
+        // graph it has no drawable edges — as a floating node the layout
+        // would scatter it between connected clusters
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            !graph.includes('FlowOnlyHelper-CLASS('),
+            'must not render a floating edgeless node'
+        );
+        assert.ok(
+            !graph.includes('click FlowOnlyHelper-CLASS'),
+            'no click binding for a node that is not in the diagram'
+        );
+        const footer = graph.match(/<div id="independentItems">.*?<\/div>/s);
+        assert.ok(footer && footer[0].includes('FlowOnlyHelper CLASS'),
+            'expected FlowOnlyHelper in the footer list');
+    });
+
+    test('items referenced from inside the graph still render connected', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        // LeafA is referenced by HubClass (a class): stays in the diagram...
+        assert.ok(graph.includes('HubClass-CLASS(HubClass CLASS) --> LeafA-CLASS'));
+        // ...and is therefore NOT in the footer
+        const footer = graph.match(/<div id="independentItems">.*?<\/div>/s);
+        assert.ok(footer && !footer[0].includes('LeafA CLASS'),
+            'connected leaf items must not be listed as independent');
+    });
+});
+
 suite('Layout engine setting', () => {
     const config = () => vscode.workspace.getConfiguration('dependencygraphforsf');
 

@@ -625,6 +625,8 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
     let dependencyCount = 0;
     let clickBindings = new Map();
     let sObjectNodes = new Set();
+    let linkedNodes = new Set();
+    let referencedOnlyCandidates = [];
     let theSelectedItem = crossReferenceMap.get( selectedItemUniqueName );
 
     // when an item is selected, BFS out to selectedItemDepth hops in both
@@ -701,11 +703,17 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
         // make node clickable:  opens the item's file in VS Code
         clickBindings.set( anItem.uniqueName, anItem.filePath );
 
-        // display items that do not have dependencies as a single shape
-        // (triggers with an sObject edge are not independent)
+        // items with no outgoing references go to the footer list — unless they
+        // are referenced from within this graph, which is only known once all
+        // edges are drawn, so defer those (triggers with an sObject edge are
+        // never independent)
         if( ( ! anItem.referencesSet || anItem.referencesSet.size === 0 )
                 && ! ( anItem.itemType.type === TRIGGERType && anItem.additionalInfo ) ) {
-            independentItemList.push( `${anItem.displayName}` );
+            if( anItem.referencedCount > 0 ) {
+                referencedOnlyCandidates.push( anItem );
+            } else {
+                independentItemList.push( `${anItem.displayName}` );
+            }
         }
 
         // highlight in orange items that depend on HIGH_REF_THRESHOLD+ other items
@@ -725,6 +733,7 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
             let sObject = anItem.additionalInfo;
             sObjectNodes.add( sObject );
             graphDefinition += `${anItem.uniqueName}(${anItem.displayName}) -->|on| sobj_${sObject}[(${sObject})]\n`;
+            linkedNodes.add( anItem.uniqueName );
         }
 
         // prepare Mermaid output for dependencies
@@ -751,15 +760,22 @@ function createGraph( projectFolder, selectedItem, myArgs, multiSelectedItems = 
             // encode flow from a dependant item to a referenced item
             let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName}) --> ${aReference.uniqueName}${methodList}\n`;
             graphDefinition += dependencyFlow;
+            linkedNodes.add( anItem.uniqueName );
+            linkedNodes.add( aReference.uniqueName );
 
             // referenced items also get a click binding
             clickBindings.set( aReference.uniqueName, aReference.filePath );
         } );
+    } );
 
-        // prepare Mermaid output for items that don't have dependencies but are referenced by other items
-        if( anItem.referencesSet.size === 0 && anItem.referencedCount > 0 ) {
-            let dependencyFlow = `${anItem.uniqueName}(${anItem.displayName})\n`;
-            graphDefinition += dependencyFlow;
+    // items that are referenced only from OUTSIDE this graph (e.g. a class
+    // used only by a flow, in a classes graph) would render as floating
+    // edgeless nodes that the layout scatters between connected clusters —
+    // list them in the footer instead
+    referencedOnlyCandidates.forEach( anItem => {
+        if( ! linkedNodes.has( anItem.uniqueName ) ) {
+            independentItemList.push( `${anItem.displayName}` );
+            clickBindings.delete( anItem.uniqueName );
         }
     } );
 

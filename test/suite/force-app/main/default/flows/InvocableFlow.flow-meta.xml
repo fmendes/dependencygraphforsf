@@ -6,5 +6,10 @@
         <actionName>TopLevelClass</actionName>
         <actionType>apex</actionType>
     </actionCalls>
+    <actionCalls>
+        <name>Call_Helper</name>
+        <actionName>FlowOnlyHelper</actionName>
+        <actionType>apex</actionType>
+    </actionCalls>
     <status>Active</status>
 </Flow>
