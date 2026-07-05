@@ -56,6 +56,30 @@ suite('Floating edgeless nodes', () => {
     });
 });
 
+suite('Content Security Policy', () => {
+    test('graph pages carry a CSP allowing only inline scripts and the CDN', () => {
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes']);
+        const graph = readAndDeleteGraph();
+        const csp = graph.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+        assert.ok(csp, 'expected a CSP meta tag');
+        assert.ok(csp[1].includes("default-src 'none'"), 'expected a deny-by-default policy');
+        assert.ok(csp[1].includes("script-src 'unsafe-inline' https://cdn.jsdelivr.net"),
+            'scripts restricted to inline + jsdelivr');
+        assert.ok(csp[1].includes('img-src data:'), 'data: images allowed for PNG export');
+    });
+
+    test('report pages carry a CSP with no external sources at all', () => {
+        DependencyGraph.createOrphansReport(SUITE_FOLDER);
+        const reportPath = path.join(SUITE_FOLDER, 'orphansReport.html');
+        const report = fs.readFileSync(reportPath, 'utf8');
+        fs.unlinkSync(reportPath);
+        const csp = report.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+        assert.ok(csp, 'expected a CSP meta tag');
+        assert.ok(csp[1].includes("default-src 'none'"), 'expected a deny-by-default policy');
+        assert.ok(!csp[1].includes('cdn.jsdelivr.net'), 'reports load nothing external');
+    });
+});
+
 suite('Layout engine setting', () => {
     const config = () => vscode.workspace.getConfiguration('dependencygraphforsf');
 

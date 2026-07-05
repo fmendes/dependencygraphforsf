@@ -198,7 +198,12 @@ function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 19
     // VS Code webview (detected via acquireVsCodeApi)
     const layoutEngine = vscode.workspace.getConfiguration( 'dependencygraphforsf' )
                                 .get( 'layoutEngine', 'dagre' );
+    // explicit CSP:  only our inline scripts and the jsdelivr CDN (Mermaid/ELK)
+    // may execute; graph labels derived from scanned files can never inject
+    // runnable content from anywhere else. img data: is for the PNG export,
+    // font/style allowances are for Mermaid's injected styles.
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; img-src data:; font-src data: https://cdn.jsdelivr.net;">
 <style>
 /* explicit light defaults:  the VS Code webview injects the editor theme's
    background, so without these the "light" mode would inherit a dark page */
@@ -378,8 +383,10 @@ ${getMermaidLoaderScript( layoutEngine, maxTextSize, maxEdges )}
 
 function buildReportHTML( theHeader, bodyHTML ) {
     // builds a simple HTML report page with clickable vscode://file links
-    // that work both in a browser and in a VS Code webview
+    // that work both in a browser and in a VS Code webview; the CSP allows
+    // only our inline script and styles — reports load nothing external
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
 <style>
 body { font-family: sans-serif; margin: 20px; }
 li { margin: 2px 0; }
