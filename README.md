@@ -71,7 +71,7 @@ None currently. (The earlier issue where the same graph rendered differently on 
 
 ## Release Notes
 
-### 1.2.0
+### 1.1.2
 
 - New `layoutEngine` setting: choose ELK (Eclipse Layout Kernel) for more compact layouts with fewer edge crossings on large graphs
 
