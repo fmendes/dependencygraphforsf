@@ -270,6 +270,30 @@ suite('Multi-selection graph', () => {
         );
     });
 
+    test('mixed-type selection works when a non-class item seeds the graph type', () => {
+        // graphItemHandler passes items[0].graphType as the flag — when the
+        // user selected the LWC first, class members of the selection must
+        // still resolve and render, since each item carries its own type
+        DependencyGraph.createGraph(SUITE_FOLDER, null, ['--lwc'], [
+            { fileName: 'myComponent', graphType: '--lwc' },
+            { fileName: 'RightClass', graphType: '--classes' }
+        ]);
+        const graph = readAndDeleteGraph();
+        assert.ok(
+            graph.includes('myComponent-LWC(myComponent LWC) --> TopLevelClass-CLASS'),
+            'LWC seed renders with its cross-type dependency'
+        );
+        assert.ok(
+            graph.includes('TopLevelClass-CLASS(TopLevelClass CLASS) --> RightClass-CLASS'),
+            'class seed renders via its inbound edge despite the --lwc flag'
+        );
+        assert.ok(
+            graph.includes('classDef myComponentItem stroke:red')
+                && graph.includes('classDef RightClassItem stroke:red'),
+            'both seeds highlighted regardless of selection order'
+        );
+    });
+
     test('the header names the selection', () => {
         DependencyGraph.createGraph(SUITE_FOLDER, null, ['--classes'], multiItems);
         const graph = readAndDeleteGraph();
