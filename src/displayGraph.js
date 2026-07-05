@@ -22,6 +22,15 @@ if( process.platform === 'win32' ) {
     folderDelimiter = '\\';
 }
 
+// pinned CDN sources for the graph renderer; the CSP in buildGraphHTML only
+// allows scripts from CDN_ORIGIN, so all of these must live on that origin
+const CDN_ORIGIN = 'https://cdn.jsdelivr.net';
+const MERMAID_VERSION = '11';
+const ELK_LAYOUT_VERSION = '0';
+const MERMAID_UMD_URL = `${CDN_ORIGIN}/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js`;
+const MERMAID_ESM_URL = `${CDN_ORIGIN}/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.esm.min.mjs`;
+const ELK_LAYOUT_ESM_URL = `${CDN_ORIGIN}/npm/@mermaid-js/layout-elk@${ELK_LAYOUT_VERSION}/dist/mermaid-layout-elk.esm.min.mjs`;
+
 function getStyleSheet( elementsWithMoreRefs, itemTypeMap, listByType, theSelectedItems ) {
     // returns a list of styles from the elements in the graph
 
@@ -177,15 +186,15 @@ function getMermaidLoaderScript( layoutEngine, maxTextSize, maxEdges ) {
 
     if( layoutEngine === 'elk' ) {
         return `<script type="module">
-import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+import mermaid from '${MERMAID_ESM_URL}';
+import elkLayouts from '${ELK_LAYOUT_ESM_URL}';
 mermaid.registerLayoutLoaders(elkLayouts);
 mermaid.initialize({${configBody},layout:'elk'});
 await mermaid.run({querySelector:'.mermaid'});
 </script>`;
     }
 
-    return `<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    return `<script src="${MERMAID_UMD_URL}"></script>
 <script>
 mermaid.initialize({${configBody}});
 mermaid.run({querySelector:'.mermaid'});
@@ -203,7 +212,7 @@ function buildGraphHTML( theHeader, graphBody, footerHTML = '', maxTextSize = 19
     // runnable content from anywhere else. img data: is for the PNG export,
     // font/style allowances are for Mermaid's injected styles.
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; img-src data:; font-src data: https://cdn.jsdelivr.net;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' ${CDN_ORIGIN}; style-src 'unsafe-inline' ${CDN_ORIGIN}; img-src data:; font-src data: ${CDN_ORIGIN};">
 <style>
 /* explicit light defaults:  the VS Code webview injects the editor theme's
    background, so without these the "light" mode would inherit a dark page */
